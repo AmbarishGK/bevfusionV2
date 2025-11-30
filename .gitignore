@@ -1,0 +1,28 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+# Python env
+.venv/
+__pycache__/
+*.pyc
+
+# Dataset directories (raw + processed)
+data/nuscenes/
+data/nuscenes_mini_bevfusion/
+
+# Checkpoints
+checkpoints/
+*.pth
+
+# Logs
+*.log
+
+# Editor / system files
+.DS_Store

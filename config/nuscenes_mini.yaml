@@ -1,0 +1,48 @@
+experiment_name: bevfusion_nuscenes_mini
+
+data:
+  dataset: nuscenes
+  version: v1.0-mini
+  root: data/nuscenes
+  processed_root: data/nuscenes_mini_bevfusion
+  info_train: data/nuscenes_mini_bevfusion/infos_train.pkl
+  info_val: data/nuscenes_mini_bevfusion/infos_val.pkl
+  classes:
+    - car
+    - truck
+    - bus
+    - trailer
+    - construction_vehicle
+    - pedestrian
+    - motorcycle
+    - bicycle
+    - traffic_cone
+    - barrier
+
+geometry:
+  point_cloud_range: [-51.2, -51.2, -5.0, 51.2, 51.2, 3.0]
+  voxel_size: [0.1, 0.1, 0.2]
+  bev_size: [1024, 1024]
+  num_cams: 6
+  image_size: [900, 1600]
+
+train:
+  batch_size: 2
+  num_workers: 4
+  epochs: 12
+  lr: 1e-4
+  weight_decay: 0.01
+  amp: true
+
+val:
+  batch_size: 2
+  num_workers: 4
+
+logging:
+  output_dir: work_dirs/bevfusion_nuscenes_mini
+  log_interval: 50
+  checkpoint_interval: 1
+
+augment:
+  image_mean: [0.485, 0.456, 0.406]
+  image_std: [0.229, 0.224, 0.225]
