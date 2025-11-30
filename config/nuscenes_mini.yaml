@@ -29,7 +29,7 @@ geometry:
 train:
   batch_size: 2
   num_workers: 4
-  epochs: 12
+  epochs: 10
   lr: 1e-4
   weight_decay: 0.01
   amp: true
