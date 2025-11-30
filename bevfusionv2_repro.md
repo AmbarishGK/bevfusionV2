@@ -170,11 +170,11 @@ gt_boxes (lidar): torch.Size([1, M, 7])  # M ~ 20–40
 gt_labels: torch.Size([1, M])
 ```
 
-If this runs, your data pipeline is back to the state we had before starting the model.
+<!-- If this runs, your data pipeline is back to the state we had before starting the model.
 
 ---
 
-## 6. If you start a new ChatGPT session and want help from this point
+## 6. If you start a new session and want help from this point
 
 If you ever lose this conversation but still have the repo, you can paste something like this to ChatGPT:
 
@@ -205,4 +205,25 @@ That’s all you need for the assistant to reconstruct context and continue from
 1. **Commit and push** this repo – Git is your backup.  
 2. Use `uv sync` + `python tools/create_data.py ...` to rebuild env and infos.  
 3. Use `python main.py` to smoke-test the data pipeline.  
-4. If starting a new chat, paste the block in section 6 so the assistant knows what you already have.
+4. If starting a new chat, paste the block in section 6 so the assistant knows what you already have. -->
+---
+
+## 6. train
+
+From repo root:
+
+```bash
+# source .venv/bin/activate
+python train.py
+```
+
+You should see something like:
+
+```text
+Epoch 1 Iter 10/323 loss=6.2238 cls=0.1748 reg=6.0490
+Epoch 1 Iter 20/323 loss=5.4153 cls=0.1657 reg=5.2496
+Epoch 1 Iter 30/323 loss=5.2086 cls=0.1594 reg=5.0492
+Epoch 1 Iter 40/323 loss=5.0789 cls=0.1537 reg=4.9252
+Epoch 1 Iter 50/323 loss=4.9601 cls=0.1461 reg=4.8139
+
+```
