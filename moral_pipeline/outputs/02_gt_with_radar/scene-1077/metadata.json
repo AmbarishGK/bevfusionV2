@@ -1,0 +1,32 @@
+{
+  "scene_token": "d25718445d89453381c659b9c8734939",
+  "scene_name": "scene-1077",
+  "sample_token": "5998b71b64c146769bde1d5430741381",
+  "timestamp": 1542800367947576,
+  "ego_translation": [
+    608.8587510330312,
+    2011.0522203242867,
+    0.0
+  ],
+  "ego_rotation": [
+    0.7117791302605412,
+    -0.0043778325291723525,
+    -0.004640270612635789,
+    -0.7023743817911753
+  ],
+  "ego_speed_ms": 6.58,
+  "description": "Night, big street, bus stop, high speed, construction vehicle",
+  "radar": {
+    "total_radar_points": 422,
+    "detections_with_radar": 11,
+    "detections_total": 12,
+    "match_radius_m": 3.0,
+    "sensors_used": [
+      "RADAR_FRONT",
+      "RADAR_FRONT_LEFT",
+      "RADAR_FRONT_RIGHT",
+      "RADAR_BACK_LEFT",
+      "RADAR_BACK_RIGHT"
+    ]
+  }
+}

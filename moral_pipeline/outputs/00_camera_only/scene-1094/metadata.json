@@ -1,0 +1,17 @@
+{
+  "scene_token": "de7d80a1f5fb4c3e82ce8a4f213b450a",
+  "scene_name": "scene-1094",
+  "sample_token": "e6b0b282aa174a978272dc2d0a89d560",
+  "timestamp": 1542800847948119,
+  "ego_speed_ms": 0.14,
+  "condition": "camera_only",
+  "cameras": [
+    "CAM_FRONT",
+    "CAM_FRONT_LEFT",
+    "CAM_FRONT_RIGHT",
+    "CAM_BACK",
+    "CAM_BACK_LEFT",
+    "CAM_BACK_RIGHT"
+  ],
+  "note": "No BEV map, no detections, no scene description. Camera images only."
+}

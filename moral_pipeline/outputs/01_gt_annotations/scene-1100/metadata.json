@@ -1,0 +1,19 @@
+{
+  "scene_token": "e233467e827140efa4b42d2b4c435855",
+  "scene_name": "scene-1100",
+  "sample_token": "a480496a5988410fbe3d8ed6c84da996",
+  "timestamp": 1542800987947699,
+  "ego_translation": [
+    1321.390767646126,
+    903.7547711424545,
+    0.0
+  ],
+  "ego_rotation": [
+    0.28420771619881524,
+    0.02224766942891785,
+    0.012069468808417267,
+    -0.9584285801147198
+  ],
+  "ego_speed_ms": 0.0,
+  "description": "Night, peds in sidewalk, peds cross crosswalk, scooter, PMD, difficult lighting"
+}

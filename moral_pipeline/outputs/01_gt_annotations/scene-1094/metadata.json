@@ -1,0 +1,19 @@
+{
+  "scene_token": "de7d80a1f5fb4c3e82ce8a4f213b450a",
+  "scene_name": "scene-1094",
+  "sample_token": "e6b0b282aa174a978272dc2d0a89d560",
+  "timestamp": 1542800847948119,
+  "ego_translation": [
+    1526.5345819509043,
+    1212.9245482527294,
+    0.0
+  ],
+  "ego_rotation": [
+    -0.08746442799363352,
+    -0.024963377722066853,
+    0.016943622324619163,
+    -0.9957106594141557
+  ],
+  "ego_speed_ms": 0.14,
+  "description": "Night, after rain, many peds, PMD, ped with bag, jaywalker, truck, scooter"
+}

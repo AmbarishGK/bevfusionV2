@@ -1,0 +1,32 @@
+{
+  "scene_token": "6f83169d067343658251f72e1dd17dbc",
+  "scene_name": "scene-0553",
+  "sample_token": "8687ba92abd3406aa797115b874ebeba",
+  "timestamp": 1535489296047917,
+  "ego_translation": [
+    1316.3781762981437,
+    1038.5936681848448,
+    0.0
+  ],
+  "ego_rotation": [
+    0.35587174665360943,
+    0.001772130048819724,
+    -0.008983384822707424,
+    0.9344899455242555
+  ],
+  "ego_speed_ms": 0.0,
+  "description": "Wait at intersection, bicycle, large truck, peds crossing crosswalk, ped with stroller",
+  "radar": {
+    "total_radar_points": 359,
+    "detections_with_radar": 19,
+    "detections_total": 33,
+    "match_radius_m": 3.0,
+    "sensors_used": [
+      "RADAR_FRONT",
+      "RADAR_FRONT_LEFT",
+      "RADAR_FRONT_RIGHT",
+      "RADAR_BACK_LEFT",
+      "RADAR_BACK_RIGHT"
+    ]
+  }
+}

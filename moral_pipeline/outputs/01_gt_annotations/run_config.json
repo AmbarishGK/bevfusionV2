@@ -1,0 +1,9 @@
+{
+  "dataroot": "data/nuscenes",
+  "version": "v1.0-mini",
+  "max_scenes": -1,
+  "cameras": null,
+  "all_frames": false,
+  "scenes_processed": 10,
+  "frames_generated": 10
+}

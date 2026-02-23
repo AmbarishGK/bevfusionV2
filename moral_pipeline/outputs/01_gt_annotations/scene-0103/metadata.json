@@ -1,0 +1,19 @@
+{
+  "scene_token": "fcbccedd61424f1b85dcbf8f897f9754",
+  "scene_name": "scene-0103",
+  "sample_token": "3e8750f331d7499e9b5123e9eb70f2e2",
+  "timestamp": 1533151603547590,
+  "ego_translation": [
+    600.1202137947669,
+    1647.490776275174,
+    0.0
+  ],
+  "ego_rotation": [
+    -0.968669701688471,
+    -0.004043399262151301,
+    -0.007666594265959211,
+    0.24820129589817977
+  ],
+  "ego_speed_ms": 8.74,
+  "description": "Many peds right, wait for turning car, long bike rack left, cyclist"
+}

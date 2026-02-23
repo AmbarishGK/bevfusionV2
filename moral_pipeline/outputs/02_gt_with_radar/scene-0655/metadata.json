@@ -1,0 +1,32 @@
+{
+  "scene_token": "bebf5f5b2a674631ab5c88fd1aa9e87a",
+  "scene_name": "scene-0655",
+  "sample_token": "5991fad3280c4f84b331536c32001a04",
+  "timestamp": 1535385092150099,
+  "ego_translation": [
+    1772.4240436762457,
+    866.3084047285619,
+    0.0
+  ],
+  "ego_rotation": [
+    0.999828997584073,
+    -0.014381919639738132,
+    0.0010568476587383669,
+    0.011576659731141147
+  ],
+  "ego_speed_ms": 7.4,
+  "description": "Parking lot, parked cars, jaywalker, bendy bus, gardening vehicles",
+  "radar": {
+    "total_radar_points": 426,
+    "detections_with_radar": 24,
+    "detections_total": 29,
+    "match_radius_m": 3.0,
+    "sensors_used": [
+      "RADAR_FRONT",
+      "RADAR_FRONT_LEFT",
+      "RADAR_FRONT_RIGHT",
+      "RADAR_BACK_LEFT",
+      "RADAR_BACK_RIGHT"
+    ]
+  }
+}

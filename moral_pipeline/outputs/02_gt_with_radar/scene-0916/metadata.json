@@ -1,0 +1,32 @@
+{
+  "scene_token": "325cef682f064c55a255f2625c533b75",
+  "scene_name": "scene-0916",
+  "sample_token": "b5989651183643369174912bc5641d3b",
+  "timestamp": 1538984233547259,
+  "ego_translation": [
+    715.6860124782239,
+    1810.0473004751316,
+    0.0
+  ],
+  "ego_rotation": [
+    0.7975669682580437,
+    0.005315502266279129,
+    -0.002909268422510148,
+    -0.6031999774010075
+  ],
+  "ego_speed_ms": 4.03,
+  "description": "Parking lot, bicycle rack, parked bicycles, bus, many peds, parked scooters, parked motorcycle",
+  "radar": {
+    "total_radar_points": 357,
+    "detections_with_radar": 31,
+    "detections_total": 40,
+    "match_radius_m": 3.0,
+    "sensors_used": [
+      "RADAR_FRONT",
+      "RADAR_FRONT_LEFT",
+      "RADAR_FRONT_RIGHT",
+      "RADAR_BACK_LEFT",
+      "RADAR_BACK_RIGHT"
+    ]
+  }
+}

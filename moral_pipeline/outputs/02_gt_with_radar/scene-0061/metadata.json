@@ -1,0 +1,32 @@
+{
+  "scene_token": "cc8c0bf57f984915a77078b10eb33198",
+  "scene_name": "scene-0061",
+  "sample_token": "ca9a282c9e77460f8360f564131a8af5",
+  "timestamp": 1532402927647951,
+  "ego_translation": [
+    411.3039349319818,
+    1180.8903791765097,
+    0.0
+  ],
+  "ego_rotation": [
+    0.5720320396729045,
+    -0.0016977771610471074,
+    0.011798001930183783,
+    -0.8201446642457809
+  ],
+  "ego_speed_ms": 9.14,
+  "description": "Parked truck, construction, intersection, turn left, following a van",
+  "radar": {
+    "total_radar_points": 602,
+    "detections_with_radar": 56,
+    "detections_total": 66,
+    "match_radius_m": 3.0,
+    "sensors_used": [
+      "RADAR_FRONT",
+      "RADAR_FRONT_LEFT",
+      "RADAR_FRONT_RIGHT",
+      "RADAR_BACK_LEFT",
+      "RADAR_BACK_RIGHT"
+    ]
+  }
+}

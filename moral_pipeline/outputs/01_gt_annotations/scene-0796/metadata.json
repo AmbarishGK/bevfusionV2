@@ -1,0 +1,19 @@
+{
+  "scene_token": "c5224b9b454b4ded9b5d2d2634bbda8a",
+  "scene_name": "scene-0796",
+  "sample_token": "c1676a2feac74eee8aa38ca3901787d6",
+  "timestamp": 1538448744447639,
+  "ego_translation": [
+    1871.025038542989,
+    2484.322482558051,
+    0.0
+  ],
+  "ego_rotation": [
+    0.40942830276460024,
+    -0.013273227328913081,
+    0.0019361367420469826,
+    0.9122436832919648
+  ],
+  "ego_speed_ms": 12.68,
+  "description": "Scooter, peds on sidewalk, bus, cars, truck, fake construction worker, bicycle, cross intersection, car overtaking us"
+}

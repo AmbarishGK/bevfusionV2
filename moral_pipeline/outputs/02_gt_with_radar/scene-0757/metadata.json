@@ -1,0 +1,32 @@
+{
+  "scene_token": "2fc3753772e241f2ab2cd16a784cc680",
+  "scene_name": "scene-0757",
+  "sample_token": "cd9964f8c3d34383b16e9c2997de1ed0",
+  "timestamp": 1535657108301401,
+  "ego_translation": [
+    334.5398509505576,
+    658.7025312409702,
+    0.0
+  ],
+  "ego_rotation": [
+    -0.13055496249256376,
+    0.007412290222562217,
+    0.0003980019276870612,
+    -0.9914132848195489
+  ],
+  "ego_speed_ms": 5.15,
+  "description": "Arrive at busy intersection, bus, wait at intersection, bicycle, peds",
+  "radar": {
+    "total_radar_points": 403,
+    "detections_with_radar": 8,
+    "detections_total": 11,
+    "match_radius_m": 3.0,
+    "sensors_used": [
+      "RADAR_FRONT",
+      "RADAR_FRONT_LEFT",
+      "RADAR_FRONT_RIGHT",
+      "RADAR_BACK_LEFT",
+      "RADAR_BACK_RIGHT"
+    ]
+  }
+}
