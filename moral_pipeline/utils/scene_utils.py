@@ -116,9 +116,18 @@ def get_ego_speed(nusc, sample):
 # ── LiDAR ─────────────────────────────────────────────────────
 
 def get_lidar_points(nusc, sample, dataroot):
+    """
+    Load LiDAR points and transform LIDAR_TOP sensor frame → ego frame.
+    Without this the cloud is rotated relative to the detection boxes.
+    """
     lidar_sd = nusc.get('sample_data', sample['data']['LIDAR_TOP'])
     pcd_path = os.path.join(dataroot, lidar_sd['filename'])
-    return np.fromfile(pcd_path, dtype=np.float32).reshape(-1, 5)
+    pts  = np.fromfile(pcd_path, dtype=np.float32).reshape(-1, 5)
+    cs   = nusc.get('calibrated_sensor', lidar_sd['calibrated_sensor_token'])
+    T    = np.array(cs['translation'])
+    R    = Quaternion(cs['rotation']).rotation_matrix
+    xyz_e = (R @ pts[:, :3].T).T + T
+    return np.column_stack([xyz_e, pts[:, 3], pts[:, 4]]).astype(np.float32)
 
 # ── Radar ─────────────────────────────────────────────────────
 
@@ -324,9 +333,12 @@ def get_detections_from_gt(nusc, sample, ego_pose, min_lidar_pts=1):
         yaw_ego = round(float(obj_yaw - ego_yaw), 4)
 
         try:
-            vel   = nusc.box_velocity(ann_token)
-            vx    = float(vel[0]) if not np.isnan(vel[0]) else 0.0
-            vy    = float(vel[1]) if not np.isnan(vel[1]) else 0.0
+            vel   = nusc.box_velocity(ann_token)   # returns world frame
+            vx_w  = float(vel[0]) if not np.isnan(vel[0]) else 0.0
+            vy_w  = float(vel[1]) if not np.isnan(vel[1]) else 0.0
+            # Rotate into ego frame (same -ego_yaw rotation used for positions)
+            vx    =  vx_w * np.cos(-ego_yaw) - vy_w * np.sin(-ego_yaw)
+            vy    =  vx_w * np.sin(-ego_yaw) + vy_w * np.cos(-ego_yaw)
             speed = round(float(np.sqrt(vx**2 + vy**2)), 2)
         except Exception:
             vx, vy, speed = 0.0, 0.0, 0.0
@@ -624,7 +636,7 @@ def make_scene_text(detections, ego_speed=None, include_velocity=True,
 # ── BEV map ───────────────────────────────────────────────────
 
 def save_bev_map(points, detections, out_path, scene_name="", source="GT",
-                 radar_pts=None):
+                 radar_pts=None, ego_speed=None):
     """
     BEV map optimised for VLM input — publication quality.
 
@@ -693,25 +705,37 @@ def save_bev_map(points, detections, out_path, scene_name="", source="GT",
                        py(r_vis[:,0], r_vis[:,1]),
                        s=2.5, c='#00d4ff', alpha=0.35,
                        linewidths=0, zorder=2)
+
+            # Only draw velocity arrows for radar points matched to a detection.
+            # Unmatched points are ghost/multipath returns — their arrows are
+            # visually misleading (random directions in empty space).
+            det_xy = np.array([[d['x'], d['y']] for d in detections]) \
+                     if detections else np.zeros((0, 2))
+
             for rp in r_vis:
                 rx, ry, _, rvx, rvy, _ = rp
                 spd = float(np.sqrt(rvx**2 + rvy**2))
-                if spd > 2.0:
-                    scale = min(4.0 / spd, 1.5)
-                    # velocity also needs the same swap
-                    ax.annotate('',
-                        xy=(px(rx + rvx*scale, ry + rvy*scale),
-                            py(rx + rvx*scale, ry + rvy*scale)),
-                        xytext=(px(rx, ry), py(rx, ry)),
-                        arrowprops=dict(arrowstyle='->', color='#00d4ff',
-                                        lw=0.8, alpha=0.5),
-                        zorder=2)
+                if spd < 2.0:
+                    continue
+                # Check if this radar point is within match_radius of any detection
+                if det_xy.shape[0] > 0:
+                    dists = np.sqrt((det_xy[:,0]-rx)**2 + (det_xy[:,1]-ry)**2)
+                    if float(dists.min()) > 2.0:   # match_radius_m = 2.0
+                        continue                    # ghost return — skip arrow
+                scale = min(4.0 / spd, 1.5)
+                ax.annotate('',
+                    xy=(px(rx + rvx*scale, ry + rvy*scale),
+                        py(rx + rvx*scale, ry + rvy*scale)),
+                    xytext=(px(rx, ry), py(rx, ry)),
+                    arrowprops=dict(arrowstyle='->', color='#00d4ff',
+                                    lw=0.8, alpha=0.5),
+                    zorder=2)
 
     # ── LiDAR point cloud ────────────────────────────────────
     if points is not None and len(points) > 0:
         ax.scatter(px(points[:,0], points[:,1]),
                    py(points[:,0], points[:,1]),
-                   s=0.35, c='#2ea043', alpha=0.30,
+                   s=0.25, c='#2ea043', alpha=0.22,
                    linewidths=0, zorder=3)
 
     # ── Detection boxes ──────────────────────────────────────
@@ -752,13 +776,13 @@ def save_bev_map(points, detections, out_path, scene_name="", source="GT",
 
         if strong:
             edge_color = '#00d4ff' if radar_reliable else color
-            face_alpha = 0.28
-            lw         = 2.0
+            face_alpha = 0.22
+            lw         = 2.5
         else:
             r, g, b = int(color[1:3],16)/255, int(color[3:5],16)/255, int(color[5:7],16)/255
-            edge_color = (r, g, b, 0.35)
+            edge_color = (r, g, b, 0.55)
             face_alpha = 0.0
-            lw         = 0.9
+            lw         = 1.2
 
         r_val = int(color[1:3], 16) / 255
         g_val = int(color[3:5], 16) / 255
@@ -768,7 +792,7 @@ def save_bev_map(points, detections, out_path, scene_name="", source="GT",
                                   linewidth=lw,
                                   edgecolor=edge_color,
                                   facecolor=(r_val, g_val, b_val, face_alpha),
-                                  zorder=4))
+                                  zorder=5))
 
         # Velocity arrow — transform to plot coords
         spd = d.get('velocity_ms', 0.0)
@@ -824,6 +848,13 @@ def save_bev_map(points, detections, out_path, scene_name="", source="GT",
     ax.text(0, 0, 'EGO', color='white', fontsize=9,
             fontweight='bold', ha='center', va='center', zorder=8)
 
+    if ego_speed is not None:
+        spd_str = f'{ego_speed:.1f} m/s  ({ego_speed*3.6:.0f} km/h)'
+        ax.text(0, -3.5, spd_str, color='#8b949e', fontsize=7.5,
+                ha='center', va='top', zorder=8,
+                bbox=dict(boxstyle='round,pad=0.2', facecolor='#0a0e14',
+                          alpha=0.7, edgecolor='none'))
+
     # ── Legend — all classes present in scene ────────────────
     # Always add radar entry if radar data present
     if radar_pts is not None and radar_pts.shape[0] > 0:
@@ -853,8 +884,8 @@ def save_bev_map(points, detections, out_path, scene_name="", source="GT",
     # ── Axes styling ─────────────────────────────────────────
     ax.set_xlim(-BEV_RANGE_M, BEV_RANGE_M)
     ax.set_ylim(-BEV_RANGE_M, BEV_RANGE_M)
-    ax.set_xlabel('← left  |  right →',   color='#8b949e', fontsize=10)
-    ax.set_ylabel('← back  |  forward →', color='#8b949e', fontsize=10)
+    ax.set_xlabel('← left  |  right →  (metres)',   color='#8b949e', fontsize=10)
+    ax.set_ylabel('← back  |  forward →  (metres)', color='#8b949e', fontsize=10)
     ax.set_title(f"MoRAL BEV [{source}] — {scene_name}",
                  color='white', fontsize=13, fontweight='bold', pad=15)
     ax.tick_params(colors='#8b949e', labelsize=9)
