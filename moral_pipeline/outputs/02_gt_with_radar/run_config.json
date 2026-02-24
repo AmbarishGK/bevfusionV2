@@ -10,9 +10,9 @@
     "RADAR_BACK_LEFT",
     "RADAR_BACK_RIGHT"
   ],
-  "match_radius_m": 3.0,
+  "match_radius_m": 2.0,
   "all_frames": false,
   "scenes_processed": 10,
   "frames_generated": 10,
-  "radar_confirmed_total": 211
+  "radar_confirmed_total": 156
 }

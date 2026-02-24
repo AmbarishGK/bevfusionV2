@@ -17,10 +17,10 @@
   "ego_speed_ms": 0.0,
   "description": "Night, peds in sidewalk, peds cross crosswalk, scooter, PMD, difficult lighting",
   "radar": {
-    "total_radar_points": 360,
-    "detections_with_radar": 16,
+    "total_radar_points": 229,
+    "detections_with_radar": 12,
     "detections_total": 22,
-    "match_radius_m": 3.0,
+    "match_radius_m": 2.0,
     "sensors_used": [
       "RADAR_FRONT",
       "RADAR_FRONT_LEFT",

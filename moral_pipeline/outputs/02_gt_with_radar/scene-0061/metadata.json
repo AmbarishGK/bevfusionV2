@@ -17,10 +17,10 @@
   "ego_speed_ms": 9.14,
   "description": "Parked truck, construction, intersection, turn left, following a van",
   "radar": {
-    "total_radar_points": 602,
-    "detections_with_radar": 56,
+    "total_radar_points": 325,
+    "detections_with_radar": 39,
     "detections_total": 66,
-    "match_radius_m": 3.0,
+    "match_radius_m": 2.0,
     "sensors_used": [
       "RADAR_FRONT",
       "RADAR_FRONT_LEFT",

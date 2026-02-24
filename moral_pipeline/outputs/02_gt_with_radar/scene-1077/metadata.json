@@ -17,10 +17,10 @@
   "ego_speed_ms": 6.58,
   "description": "Night, big street, bus stop, high speed, construction vehicle",
   "radar": {
-    "total_radar_points": 422,
-    "detections_with_radar": 11,
+    "total_radar_points": 300,
+    "detections_with_radar": 9,
     "detections_total": 12,
-    "match_radius_m": 3.0,
+    "match_radius_m": 2.0,
     "sensors_used": [
       "RADAR_FRONT",
       "RADAR_FRONT_LEFT",

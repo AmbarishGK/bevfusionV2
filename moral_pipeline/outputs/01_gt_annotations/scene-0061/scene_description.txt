@@ -1,1 +1,44 @@
-66 objects detected around the vehicle. barrier at 10.22m bearing -144.0deg. barrier at 10.62m bearing -141.4deg (mostly_occluded). traffic_cone at 11.13m bearing -147.9deg. traffic_cone at 12.47m bearing -33.4deg. pedestrian at 12.78m bearing 171.9deg moving at 1.35m/s. pedestrian at 13.26m bearing 163.2deg moving at 0.92m/s. pedestrian at 14.05m bearing 174.5deg moving at 1.14m/s. barrier at 14.18m bearing -29.3deg. pedestrian at 14.82m bearing 173.7deg moving at 1.36m/s. barrier at 14.99m bearing -33.1deg. traffic_cone at 15.92m bearing -155.3deg. barrier at 16.0m bearing -25.9deg. pedestrian at 16.09m bearing -121.3deg moving at 2.72m/s. truck at 16.84m bearing 15.7deg. barrier at 17.9m bearing -23.2deg. Ego vehicle travelling at 9.1m/s (32.9km/h).
+SCENE OVERVIEW: 36 high-confidence objects within 50.0m (30 additional marginal detections beyond range or with weak LiDAR returns). Data source: LiDAR ground-truth. 14 objects moving. 3 partially or fully occluded.
+EGO STATE: Speed 9.1 m/s (32.9 km/h). Stopping distance at current speed: 10.4 m. Vehicle size: 4.5 m long, 2.0 m wide.
+NEAREST OBJECT PER ZONE: directly ahead: truck at 16.84 m; front-left: pedestrian at 18.08 m moving 1.7 m/s (gt-estimated); front-right: traffic_cone at 12.47 m; left: pedestrian at 21.8 m; right: pedestrian at 32.46 m moving 1.3 m/s (gt-estimated); rear-right: barrier at 10.22 m; directly behind: pedestrian at 12.78 m moving 1.4 m/s (gt-estimated).
+SAFETY CRITICAL: traffic_cone front-right 12.47 m (TTC ≈ 1.4 s); barrier front-right 14.18 m (TTC ≈ 1.6 s); barrier front-right 14.99 m (TTC ≈ 1.6 s); barrier front-right 16.0 m (TTC ≈ 1.8 s); truck directly ahead 16.84 m (TTC ≈ 1.8 s).
+OBJECTS WITHIN 50m (high-confidence):
+  [1] barrier, zone=rear-right, dist=10.22m, size=1.9x0.6x1.1m, speed=stationary, visibility=fully_visible, lidar=high.
+  [2] barrier, zone=rear-right, dist=10.62m, size=1.9x0.6x1.1m, speed=stationary, visibility=mostly_occluded, lidar=medium.
+  [3] traffic_cone, zone=rear-right, dist=11.13m, size=0.3x0.3x0.7m, speed=stationary, visibility=mostly_visible, lidar=low.
+  [4] traffic_cone, zone=front-right, dist=12.47m, size=0.5x0.5x0.7m, speed=stationary, visibility=fully_visible, lidar=low, ttc≈1.4s.
+  [5] pedestrian, zone=directly behind, dist=12.78m, size=1.0x0.9x1.6m, speed=1.35m/s(gt-estimated), visibility=fully_visible, lidar=low.
+  [6] pedestrian, zone=directly behind, dist=13.26m, size=0.9x1.0x1.9m, speed=0.92m/s(gt-estimated), visibility=fully_visible, lidar=medium.
+  [7] pedestrian, zone=directly behind, dist=14.05m, size=1.0x0.9x1.7m, speed=1.14m/s(gt-estimated), visibility=fully_visible, lidar=low.
+  [8] barrier, zone=front-right, dist=14.18m, size=2.1x0.6x1.1m, speed=stationary, visibility=fully_visible, lidar=medium, ttc≈1.6s.
+  [9] pedestrian, zone=directly behind, dist=14.82m, size=0.9x0.9x1.7m, speed=1.36m/s(gt-estimated), visibility=mostly_visible, lidar=medium.
+  [10] barrier, zone=front-right, dist=14.99m, size=2.1x0.7x1.0m, speed=stationary, visibility=mostly_visible, lidar=medium, ttc≈1.6s.
+  [11] barrier, zone=front-right, dist=16.0m, size=2.0x0.7x1.1m, speed=stationary, visibility=fully_visible, lidar=medium, ttc≈1.8s.
+  [12] pedestrian, zone=rear-right, dist=16.09m, size=0.8x1.0x1.6m, speed=2.72m/s(gt-estimated), visibility=fully_visible, lidar=low.
+  [13] truck, zone=directly ahead, dist=16.84m, size=2.9x10.2x3.6m, speed=stationary, visibility=fully_visible, lidar=high, ttc≈1.8s, gap≈1.3m(passable).
+  [14] barrier, zone=front-right, dist=17.9m, size=2.0x0.7x1.1m, speed=stationary, visibility=fully_visible, lidar=medium, ttc≈2.0s.
+  [15] barrier, zone=directly ahead, dist=17.9m, size=0.6x0.8x1.3m, speed=stationary, visibility=fully_visible, lidar=low, ttc≈1.9s.
+  [16] pedestrian, zone=directly ahead, dist=17.97m, size=0.6x0.6x1.8m, speed=stationary, visibility=fully_visible, lidar=medium, ttc≈2.0s.
+  [17] pedestrian, zone=front-left, dist=18.08m, size=0.9x0.9x1.8m, speed=1.66m/s(gt-estimated), visibility=partially_visible, lidar=low.
+  [18] barrier, zone=directly ahead, dist=19.8m, size=2.0x0.7x1.1m, speed=stationary, visibility=fully_visible, lidar=medium, ttc≈2.2s.
+  [19] barrier, zone=front-right, dist=20.13m, size=2.1x0.7x1.1m, speed=stationary, visibility=mostly_occluded, lidar=low, ttc≈2.2s.
+  [20] car, zone=rear-right, dist=20.74m, size=1.8x4.3x1.6m, speed=9.57m/s(gt-estimated), visibility=fully_visible, lidar=medium, gap≈1.8m(passable).
+  [21] barrier, zone=directly ahead, dist=21.74m, size=2.0x0.7x1.1m, speed=stationary, visibility=fully_visible, lidar=low, ttc≈2.4s.
+  [22] pedestrian, zone=left, dist=21.8m, size=0.9x0.9x1.7m, speed=stationary, visibility=fully_visible, lidar=low.
+  [23] barrier, zone=directly ahead, dist=23.7m, size=2.0x0.7x1.1m, speed=stationary, visibility=fully_visible, lidar=low, ttc≈2.6s.
+  [24] barrier, zone=directly ahead, dist=25.68m, size=1.9x0.6x1.1m, speed=stationary, visibility=fully_visible, lidar=low, ttc≈2.8s.
+  [25] barrier, zone=directly ahead, dist=27.62m, size=2.0x0.7x1.1m, speed=stationary, visibility=fully_visible, lidar=low, ttc≈3.0s.
+  [26] pedestrian, zone=left, dist=28.78m, size=0.8x0.9x1.8m, speed=stationary, visibility=fully_visible, lidar=low.
+  [27] pedestrian, zone=right, dist=32.46m, size=0.8x0.9x1.8m, speed=1.30m/s(gt-estimated), visibility=fully_visible, lidar=low.
+  [28] barrier, zone=directly ahead, dist=33.47m, size=2.1x0.8x1.1m, speed=stationary, visibility=fully_visible, lidar=low, ttc≈3.7s.
+  [29] barrier, zone=directly ahead, dist=35.49m, size=2.0x0.8x1.1m, speed=stationary, visibility=fully_visible, lidar=low, ttc≈3.9s.
+  [30] car, zone=directly ahead, dist=36.44m, size=1.7x4.0x1.6m, speed=1.71m/s(gt-estimated), visibility=fully_visible, lidar=low, ttc≈3.4s, gap≈1.8m(passable).
+  [31] car, zone=directly ahead, dist=39.03m, size=1.9x4.7x2.0m, speed=5.18m/s(gt-estimated), visibility=fully_visible, lidar=medium, ttc≈2.7s, gap≈1.7m(passable).
+  [32] pedestrian, zone=rear-right, dist=40.67m, size=0.8x0.9x1.7m, speed=1.47m/s(gt-estimated), visibility=fully_visible, lidar=low.
+  [33] car, zone=directly ahead, dist=41.41m, size=1.8x4.1x1.5m, speed=11.26m/s(gt-estimated), visibility=fully_visible, lidar=low, ttc≈2.0s, gap≈1.8m(passable).
+  [34] barrier, zone=directly ahead, dist=44.26m, size=2.0x0.7x1.0m, speed=stationary, visibility=fully_visible, lidar=low, ttc≈4.8s.
+  [35] truck, zone=directly ahead, dist=47.2m, size=1.8x4.5x2.1m, speed=3.23m/s(gt-estimated), visibility=mostly_visible, lidar=low, ttc≈3.8s, gap≈1.8m(passable).
+  [36] pedestrian, zone=front-right, dist=47.82m, size=0.7x0.7x1.7m, speed=1.23m/s(gt-estimated), visibility=mostly_visible, lidar=low, ttc≈4.6s.
+MARGINAL DETECTIONS (beyond 50m or <3 LiDAR pts — low confidence): 30 objects: 7 barrier, 1 bicycle, 1 bus, 4 car, 1 construction_vehicle, 15 pedestrian, 1 traffic_cone. These are present in LiDAR data but too far or sparse for reliable VLM reasoning.
+TOTAL OBJECT COUNTS: 23 barriers, 1 bicycle, 1 bus, 8 cars, 1 construction_vehicle, 27 pedestrians, 3 traffic_cones, 2 trucks.
+OCCLUDED (LiDAR detects, camera may miss): barrier at 10.62m rear-right (mostly_occluded); pedestrian at 18.08m front-left (partially_visible); barrier at 20.13m front-right (mostly_occluded).

@@ -17,10 +17,10 @@
   "ego_speed_ms": 12.68,
   "description": "Scooter, peds on sidewalk, bus, cars, truck, fake construction worker, bicycle, cross intersection, car overtaking us",
   "radar": {
-    "total_radar_points": 481,
-    "detections_with_radar": 10,
+    "total_radar_points": 287,
+    "detections_with_radar": 5,
     "detections_total": 19,
-    "match_radius_m": 3.0,
+    "match_radius_m": 2.0,
     "sensors_used": [
       "RADAR_FRONT",
       "RADAR_FRONT_LEFT",

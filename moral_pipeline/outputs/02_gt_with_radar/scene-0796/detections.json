@@ -23,7 +23,8 @@
     "radar_vx": null,
     "radar_vy": null,
     "radar_rcs": null,
-    "radar_velocity_confirmed": false
+    "radar_velocity_confirmed": false,
+    "radar_quality": "unconfirmed"
   },
   {
     "class": "pedestrian",
@@ -49,7 +50,8 @@
     "radar_vx": null,
     "radar_vy": null,
     "radar_rcs": null,
-    "radar_velocity_confirmed": false
+    "radar_velocity_confirmed": false,
+    "radar_quality": "unconfirmed"
   },
   {
     "class": "pedestrian",
@@ -75,7 +77,8 @@
     "radar_vx": 0.554,
     "radar_vy": 0.533,
     "radar_rcs": -3.5,
-    "radar_velocity_confirmed": true
+    "radar_velocity_confirmed": true,
+    "radar_quality": "radial_ambiguous"
   },
   {
     "class": "pedestrian",
@@ -101,7 +104,8 @@
     "radar_vx": 0.554,
     "radar_vy": 0.533,
     "radar_rcs": -3.5,
-    "radar_velocity_confirmed": true
+    "radar_velocity_confirmed": true,
+    "radar_quality": "radial_ambiguous"
   },
   {
     "class": "pedestrian",
@@ -127,7 +131,8 @@
     "radar_vx": null,
     "radar_vy": null,
     "radar_rcs": null,
-    "radar_velocity_confirmed": false
+    "radar_velocity_confirmed": false,
+    "radar_quality": "unconfirmed"
   },
   {
     "class": "car",
@@ -149,11 +154,12 @@
     "num_radar_pts": 1,
     "visibility": "fully_visible",
     "ann_token": "5543e86cdc5e4d4c8f003040e2d940e2",
-    "radar_velocity_ms": 8.28,
-    "radar_vx": -6.134,
-    "radar_vy": 5.56,
-    "radar_rcs": -3.5,
-    "radar_velocity_confirmed": true
+    "radar_velocity_ms": null,
+    "radar_vx": null,
+    "radar_vy": null,
+    "radar_rcs": null,
+    "radar_velocity_confirmed": false,
+    "radar_quality": "unconfirmed"
   },
   {
     "class": "bus",
@@ -175,11 +181,12 @@
     "num_radar_pts": 7,
     "visibility": "fully_visible",
     "ann_token": "77afa772cb4a4e5c8a5a53f2019bdba0",
-    "radar_velocity_ms": 4.61,
-    "radar_vx": -3.078,
-    "radar_vy": 3.433,
-    "radar_rcs": -3.0,
-    "radar_velocity_confirmed": true
+    "radar_velocity_ms": null,
+    "radar_vx": null,
+    "radar_vy": null,
+    "radar_rcs": null,
+    "radar_velocity_confirmed": false,
+    "radar_quality": "unconfirmed"
   },
   {
     "class": "car",
@@ -201,11 +208,12 @@
     "num_radar_pts": 0,
     "visibility": "partially_visible",
     "ann_token": "fa8c4d24e2434891a327b4aed294f2e2",
-    "radar_velocity_ms": 2.73,
-    "radar_vx": -1.236,
-    "radar_vy": 2.436,
-    "radar_rcs": -4.0,
-    "radar_velocity_confirmed": true
+    "radar_velocity_ms": null,
+    "radar_vx": null,
+    "radar_vy": null,
+    "radar_rcs": null,
+    "radar_velocity_confirmed": false,
+    "radar_quality": "unconfirmed"
   },
   {
     "class": "barrier",
@@ -231,7 +239,8 @@
     "radar_vx": -0.174,
     "radar_vy": 0.041,
     "radar_rcs": -5.0,
-    "radar_velocity_confirmed": true
+    "radar_velocity_confirmed": true,
+    "radar_quality": "reliable"
   },
   {
     "class": "car",
@@ -257,7 +266,8 @@
     "radar_vx": null,
     "radar_vy": null,
     "radar_rcs": null,
-    "radar_velocity_confirmed": false
+    "radar_velocity_confirmed": false,
+    "radar_quality": "unconfirmed"
   },
   {
     "class": "car",
@@ -279,11 +289,12 @@
     "num_radar_pts": 0,
     "visibility": "fully_visible",
     "ann_token": "310d67f436df4a0ea70e9606dfcd0c51",
-    "radar_velocity_ms": 13.41,
-    "radar_vx": -12.395,
-    "radar_vy": 5.107,
-    "radar_rcs": 3.5,
-    "radar_velocity_confirmed": true
+    "radar_velocity_ms": null,
+    "radar_vx": null,
+    "radar_vy": null,
+    "radar_rcs": null,
+    "radar_velocity_confirmed": false,
+    "radar_quality": "unconfirmed"
   },
   {
     "class": "car",
@@ -309,7 +320,8 @@
     "radar_vx": 12.182,
     "radar_vy": 0.433,
     "radar_rcs": 12.5,
-    "radar_velocity_confirmed": true
+    "radar_velocity_confirmed": true,
+    "radar_quality": "reliable"
   },
   {
     "class": "car",
@@ -335,7 +347,8 @@
     "radar_vx": null,
     "radar_vy": null,
     "radar_rcs": null,
-    "radar_velocity_confirmed": false
+    "radar_velocity_confirmed": false,
+    "radar_quality": "unconfirmed"
   },
   {
     "class": "car",
@@ -361,7 +374,8 @@
     "radar_vx": 14.333,
     "radar_vy": 1.138,
     "radar_rcs": 3.5,
-    "radar_velocity_confirmed": true
+    "radar_velocity_confirmed": true,
+    "radar_quality": "reliable"
   },
   {
     "class": "truck",
@@ -387,7 +401,8 @@
     "radar_vx": null,
     "radar_vy": null,
     "radar_rcs": null,
-    "radar_velocity_confirmed": false
+    "radar_velocity_confirmed": false,
+    "radar_quality": "unconfirmed"
   },
   {
     "class": "car",
@@ -413,7 +428,8 @@
     "radar_vx": null,
     "radar_vy": null,
     "radar_rcs": null,
-    "radar_velocity_confirmed": false
+    "radar_velocity_confirmed": false,
+    "radar_quality": "unconfirmed"
   },
   {
     "class": "truck",
@@ -439,7 +455,8 @@
     "radar_vx": null,
     "radar_vy": null,
     "radar_rcs": null,
-    "radar_velocity_confirmed": false
+    "radar_velocity_confirmed": false,
+    "radar_quality": "unconfirmed"
   },
   {
     "class": "car",
@@ -465,7 +482,8 @@
     "radar_vx": null,
     "radar_vy": null,
     "radar_rcs": null,
-    "radar_velocity_confirmed": false
+    "radar_velocity_confirmed": false,
+    "radar_quality": "unconfirmed"
   },
   {
     "class": "truck",
@@ -487,10 +505,11 @@
     "num_radar_pts": 0,
     "visibility": "fully_visible",
     "ann_token": "a89b46240ab7452cb990cc034efffd8c",
-    "radar_velocity_ms": 11.43,
-    "radar_vx": -11.091,
-    "radar_vy": 2.762,
-    "radar_rcs": 10.0,
-    "radar_velocity_confirmed": true
+    "radar_velocity_ms": null,
+    "radar_vx": null,
+    "radar_vy": null,
+    "radar_rcs": null,
+    "radar_velocity_confirmed": false,
+    "radar_quality": "unconfirmed"
   }
 ]

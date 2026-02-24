@@ -17,10 +17,10 @@
   "ego_speed_ms": 8.74,
   "description": "Many peds right, wait for turning car, long bike rack left, cyclist",
   "radar": {
-    "total_radar_points": 525,
-    "detections_with_radar": 16,
+    "total_radar_points": 361,
+    "detections_with_radar": 13,
     "detections_total": 23,
-    "match_radius_m": 3.0,
+    "match_radius_m": 2.0,
     "sensors_used": [
       "RADAR_FRONT",
       "RADAR_FRONT_LEFT",

@@ -1,1 +1,33 @@
-33 objects detected around the vehicle. car at 3.65m bearing 67.7deg. car at 7.03m bearing 178.7deg. truck at 7.82m bearing 154.5deg. trailer at 15.51m bearing 168.4deg. barrier at 15.72m bearing -108.8deg. bicycle at 15.84m bearing -20.5deg moving at 3.43m/s. barrier at 15.87m bearing -120.5deg. barrier at 16.71m bearing -97.3deg. barrier at 16.92m bearing 45.5deg moving at 1.12m/s (mostly_occluded). barrier at 16.93m bearing -131.5deg. pedestrian at 17.48m bearing 45.9deg moving at 1.11m/s (mostly_occluded). pedestrian at 17.92m bearing 55.7deg moving at 1.47m/s. barrier at 18.45m bearing -89.1deg. barrier at 18.67m bearing -140.1deg. pedestrian at 19.7m bearing 55.1deg moving at 1.92m/s. Ego vehicle travelling at 0.0m/s (0.0km/h).
+SCENE OVERVIEW: 25 high-confidence objects within 50.0m (8 additional marginal detections beyond range or with weak LiDAR returns). Data source: LiDAR ground-truth. 11 objects moving. 3 partially or fully occluded.
+EGO STATE: Speed 0.0 m/s (0.0 km/h). Stopping distance at current speed: 0.0 m. Vehicle size: 4.5 m long, 2.0 m wide.
+NEAREST OBJECT PER ZONE: directly ahead: bicycle at 15.84 m moving 3.4 m/s (gt-estimated); front-left: pedestrian at 17.48 m moving 1.1 m/s (gt-estimated); left: car at 3.65 m; right: barrier at 15.72 m; rear-left: truck at 7.82 m; rear-right: barrier at 15.87 m; directly behind: car at 7.03 m.
+SAFETY CRITICAL: bicycle directly ahead 15.84 m at 3.4 m/s (gt-estimated) (TTC ≈ 4.6 s); car left 3.65 m (TTC ≈ 36.5 s); car directly behind 7.03 m (TTC ≈ 70.3 s); truck rear-left 7.82 m (TTC ≈ 78.2 s).
+OBJECTS WITHIN 50m (high-confidence):
+  [1] car, zone=left, dist=3.65m, size=1.9x4.6x1.5m, speed=stationary, visibility=fully_visible, lidar=high, gap≈1.8m(passable).
+  [2] car, zone=directly behind, dist=7.03m, size=2.0x4.8x2.0m, speed=stationary, visibility=fully_visible, lidar=high, gap≈1.7m(passable).
+  [3] truck, zone=rear-left, dist=7.82m, size=2.3x6.4x4.0m, speed=stationary, visibility=fully_visible, lidar=high, gap≈1.5m(passable).
+  [4] trailer, zone=directly behind, dist=15.51m, size=2.3x14.0x3.9m, speed=stationary, visibility=fully_visible, lidar=high.
+  [5] barrier, zone=right, dist=15.72m, size=3.0x0.4x0.9m, speed=stationary, visibility=fully_visible, lidar=medium.
+  [6] bicycle, zone=directly ahead, dist=15.84m, size=0.5x1.6x1.7m, speed=3.43m/s(gt-estimated), visibility=fully_visible, lidar=medium, ttc≈4.6s.
+  [7] barrier, zone=rear-right, dist=15.87m, size=3.0x0.4x1.0m, speed=stationary, visibility=fully_visible, lidar=medium.
+  [8] barrier, zone=right, dist=16.71m, size=3.1x0.4x1.0m, speed=stationary, visibility=fully_visible, lidar=medium.
+  [9] barrier, zone=rear-right, dist=16.93m, size=2.9x0.4x1.0m, speed=stationary, visibility=fully_visible, lidar=medium.
+  [10] pedestrian, zone=front-left, dist=17.48m, size=0.6x0.8x1.6m, speed=1.11m/s(gt-estimated), visibility=mostly_occluded, lidar=low.
+  [11] pedestrian, zone=front-left, dist=17.92m, size=0.7x0.8x1.8m, speed=1.47m/s(gt-estimated), visibility=fully_visible, lidar=medium.
+  [12] barrier, zone=right, dist=18.45m, size=2.9x0.4x0.9m, speed=stationary, visibility=fully_visible, lidar=medium.
+  [13] barrier, zone=rear-right, dist=18.67m, size=3.1x0.4x0.9m, speed=stationary, visibility=fully_visible, lidar=medium.
+  [14] pedestrian, zone=front-left, dist=19.7m, size=0.6x0.9x1.6m, speed=1.92m/s(gt-estimated), visibility=mostly_visible, lidar=low.
+  [15] barrier, zone=rear-right, dist=21.37m, size=3.6x0.4x1.0m, speed=stationary, visibility=fully_visible, lidar=medium.
+  [16] pedestrian, zone=front-left, dist=21.79m, size=0.9x1.0x1.9m, speed=1.59m/s(gt-estimated), visibility=fully_visible, lidar=low.
+  [17] pedestrian, zone=front-left, dist=22.04m, size=0.7x0.8x1.7m, speed=1.39m/s(gt-estimated), visibility=fully_visible, lidar=low.
+  [18] pedestrian, zone=front-left, dist=23.76m, size=0.7x0.9x1.7m, speed=1.36m/s(gt-estimated), visibility=fully_visible, lidar=low.
+  [19] barrier, zone=rear-right, dist=24.5m, size=3.3x0.5x0.9m, speed=stationary, visibility=fully_visible, lidar=medium.
+  [20] pedestrian, zone=front-left, dist=24.89m, size=0.6x0.9x1.7m, speed=0.96m/s(gt-estimated), visibility=mostly_occluded, lidar=low.
+  [21] barrier, zone=rear-right, dist=27.77m, size=3.3x0.5x0.9m, speed=stationary, visibility=fully_visible, lidar=low.
+  [22] barrier, zone=directly behind, dist=30.92m, size=3.3x0.5x0.9m, speed=stationary, visibility=fully_visible, lidar=low.
+  [23] car, zone=front-left, dist=39.72m, size=2.0x4.7x1.4m, speed=1.95m/s(gt-estimated), visibility=fully_visible, lidar=low, gap≈1.7m(passable).
+  [24] bus, zone=front-left, dist=45.03m, size=2.6x7.4x2.8m, speed=2.38m/s(gt-estimated), visibility=mostly_occluded, lidar=low, gap≈1.4m(passable).
+  [25] bus, zone=front-left, dist=48.81m, size=2.7x9.6x3.2m, speed=0.76m/s(gt-estimated), visibility=fully_visible, lidar=low, gap≈1.3m(passable).
+MARGINAL DETECTIONS (beyond 50m or <3 LiDAR pts — low confidence): 8 objects: 2 barrier, 5 car, 1 pedestrian. These are present in LiDAR data but too far or sparse for reliable VLM reasoning.
+TOTAL OBJECT COUNTS: 12 barriers, 1 bicycle, 2 buss, 8 cars, 8 pedestrians, 1 trailer, 1 truck.
+OCCLUDED (LiDAR detects, camera may miss): pedestrian at 17.48m front-left (mostly_occluded); pedestrian at 24.89m front-left (mostly_occluded); bus at 45.03m front-left (mostly_occluded).

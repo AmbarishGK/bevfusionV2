@@ -17,10 +17,10 @@
   "ego_speed_ms": 7.4,
   "description": "Parking lot, parked cars, jaywalker, bendy bus, gardening vehicles",
   "radar": {
-    "total_radar_points": 426,
-    "detections_with_radar": 24,
+    "total_radar_points": 221,
+    "detections_with_radar": 18,
     "detections_total": 29,
-    "match_radius_m": 3.0,
+    "match_radius_m": 2.0,
     "sensors_used": [
       "RADAR_FRONT",
       "RADAR_FRONT_LEFT",

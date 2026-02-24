@@ -23,7 +23,8 @@
     "radar_vx": -0.041,
     "radar_vy": -0.019,
     "radar_rcs": 1.0,
-    "radar_velocity_confirmed": true
+    "radar_velocity_confirmed": true,
+    "radar_quality": "reliable"
   },
   {
     "class": "traffic_cone",
@@ -49,7 +50,8 @@
     "radar_vx": 0.09,
     "radar_vy": 0.124,
     "radar_rcs": 4.0,
-    "radar_velocity_confirmed": true
+    "radar_velocity_confirmed": true,
+    "radar_quality": "reliable"
   },
   {
     "class": "car",
@@ -75,7 +77,8 @@
     "radar_vx": 5.506,
     "radar_vy": 0.769,
     "radar_rcs": -4.0,
-    "radar_velocity_confirmed": true
+    "radar_velocity_confirmed": true,
+    "radar_quality": "reliable"
   },
   {
     "class": "traffic_cone",
@@ -101,7 +104,8 @@
     "radar_vx": -0.104,
     "radar_vy": 0.037,
     "radar_rcs": 0.0,
-    "radar_velocity_confirmed": true
+    "radar_velocity_confirmed": true,
+    "radar_quality": "reliable"
   },
   {
     "class": "construction_vehicle",
@@ -127,7 +131,8 @@
     "radar_vx": -0.017,
     "radar_vy": 0.008,
     "radar_rcs": -2.0,
-    "radar_velocity_confirmed": true
+    "radar_velocity_confirmed": true,
+    "radar_quality": "reliable"
   },
   {
     "class": "car",
@@ -153,7 +158,8 @@
     "radar_vx": null,
     "radar_vy": null,
     "radar_rcs": null,
-    "radar_velocity_confirmed": false
+    "radar_velocity_confirmed": false,
+    "radar_quality": "unconfirmed"
   },
   {
     "class": "car",
@@ -179,7 +185,8 @@
     "radar_vx": -0.102,
     "radar_vy": 0.05,
     "radar_rcs": -0.5,
-    "radar_velocity_confirmed": true
+    "radar_velocity_confirmed": true,
+    "radar_quality": "reliable"
   },
   {
     "class": "car",
@@ -205,7 +212,8 @@
     "radar_vx": -0.136,
     "radar_vy": 0.127,
     "radar_rcs": 4.0,
-    "radar_velocity_confirmed": true
+    "radar_velocity_confirmed": true,
+    "radar_quality": "reliable"
   },
   {
     "class": "truck",
@@ -231,7 +239,8 @@
     "radar_vx": 7.855,
     "radar_vy": -0.245,
     "radar_rcs": -1.5,
-    "radar_velocity_confirmed": true
+    "radar_velocity_confirmed": true,
+    "radar_quality": "reliable"
   },
   {
     "class": "car",
@@ -257,7 +266,8 @@
     "radar_vx": null,
     "radar_vy": null,
     "radar_rcs": null,
-    "radar_velocity_confirmed": false
+    "radar_velocity_confirmed": false,
+    "radar_quality": "unconfirmed"
   },
   {
     "class": "bus",
@@ -283,6 +293,7 @@
     "radar_vx": null,
     "radar_vy": null,
     "radar_rcs": null,
-    "radar_velocity_confirmed": false
+    "radar_velocity_confirmed": false,
+    "radar_quality": "unconfirmed"
   }
 ]
