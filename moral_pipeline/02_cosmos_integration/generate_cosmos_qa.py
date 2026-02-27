@@ -1,7 +1,7 @@
 """
 moral_pipeline/02_cosmos_integration/generate_cosmos_qa.py
 ============================================================
-MoRAL Pipeline — Cosmos Reason 2 QA Generation Script  [v2 — 8B rewrite]
+MoRAL Pipeline — Cosmos Reason 2 QA Generation Script  [v3 — cloud ready]
 
 PURPOSE:
   For each clean scene, sends BEV map + all camera images + full GT JSON
@@ -115,29 +115,66 @@ COSMOS_SYSTEM_PROMPT = (
     "You are an expert autonomous driving perception and safety analyst. "
     "Respond ONLY in English.\n\n"
     "You are given three inputs for each question:\n"
-    "  1. A BEV (bird's-eye-view) map rendered from LiDAR — shows all detected objects "
-    "as coloured shapes around the ego vehicle (white box, centre). "
-    "In condition D, cyan arrows on objects show radar-confirmed Doppler velocities.\n"
-    "  2. A front-facing camera image — shows the road scene as the driver sees it.\n"
-    "  3. GROUND TRUTH DATA — structured sensor annotations with exact distances, "
-    "speeds, bearings, and visibility for every detected object.\n\n"
-    "STRICT REASONING ORDER — you must follow this for every answer:\n"
-    "  Step 1 — READ THE BEV MAP: Describe what you see spatially. Where are the objects "
-    "relative to ego? What is the spatial layout — crowded ahead, clear to the right, "
-    "objects merging from the left? If condition D, describe the cyan Doppler vectors "
-    "you can see on objects — their direction and approximate magnitude.\n"
-    "  Step 2 — READ THE FRONT CAMERA: Describe what is visible in the camera image. "
-    "What does the road look like? What objects can you see directly, and what might be "
-    "partially obscured? Connect what you see in the camera to what the BEV shows.\n"
-    "  Step 3 — CONFIRM WITH GT DATA: Use the exact numerical values from GROUND TRUTH "
-    "DATA to confirm and quantify what you observed in Steps 1 and 2. "
-    "Do all relevant calculations here (TTC, stopping distance, lateral gap). "
-    "Never invent numbers — every figure must come from the GT data.\n"
-    "  Step 4 — DRIVING DECISION: State a clear, specific action the vehicle should take "
-    "and why, grounded in the numbers from Step 3.\n\n"
+    "  1. A BEV (bird's-eye-view) map rendered from LiDAR.\n"
+    "  2. A front-facing camera image.\n"
+    "  3. GROUND TRUTH DATA — structured sensor annotations.\n\n"
+
+    "BEV MAP VISUAL LEGEND — memorise these before reading any BEV:\n"
+    "  EGO VEHICLE: white/blue rectangle at the exact centre. "
+    "A white arrow points forward (up = forward direction of travel).\n"
+    "  OBJECT BOXES — colour encodes class:\n"
+    "    Blue box       = car\n"
+    "    Orange box     = truck\n"
+    "    Red box        = bus\n"
+    "    Purple box     = trailer\n"
+    "    Yellow box     = motorcycle\n"
+    "    Teal box       = bicycle\n"
+    "    Green box      = pedestrian\n"
+    "    Cyan box       = traffic cone  ← NOTE: cyan box = cone, NOT radar\n"
+    "    Tan/brown box  = barrier\n"
+    "  OBJECT OPACITY: solid fill = strong detection (≥10 LiDAR points); "
+    "faint outline only = weak/distant detection.\n"
+    "  RANGE RINGS: dashed circles at 10m, 20m, 30m, 40m, 50m from ego.\n\n"
+
+    "VELOCITY ARROWS — two distinct types, do NOT confuse them:\n"
+    "  COLOURED arrows (same colour as the object box): present in ALL conditions "
+    "(B and D). These are GT velocity vectors computed from nuScenes annotations "
+    "(position difference between consecutive keyframes). They show the object's "
+    "estimated speed and direction but are NOT directly measured — they are derived "
+    "from frame-to-frame position changes.\n"
+    "  CYAN arrows (#00d4ff, bright cyan): present ONLY in condition D. "
+    "These are radar Doppler velocity vectors — physically measured in a single frame "
+    "via frequency shift. They appear on radar-confirmed objects only. "
+    "A cyan ARROW on a moving object = radar Doppler. "
+    "A cyan BOX = traffic cone (completely different — do not confuse).\n"
+    "  CYAN DOTS (small, faint): raw radar return points in condition D. "
+    "These show where radar echoes were detected, independent of GT detections.\n\n"
+
+    "KEY DISTINCTION FOR REASONING:\n"
+    "  Coloured arrow = estimated velocity (needs multiple frames, can lag)\n"
+    "  Cyan arrow     = measured velocity (single frame, instantaneous, more reliable "
+    "for fast-changing situations like sudden braking or merging)\n"
+    "  When both appear on the same object, compare them — agreement confirms "
+    "the velocity reading; large disagreement suggests the object changed speed "
+    "between frames.\n\n"
+
+    "STRICT REASONING ORDER — follow this for every answer:\n"
+    "  Step 1 — READ THE BEV MAP: Describe the spatial layout. Identify object "
+    "positions, classes (by box colour), and motion (by arrow colour and direction). "
+    "In condition D, explicitly distinguish cyan Doppler arrows from coloured GT arrows "
+    "and describe what each tells you about the object's velocity.\n"
+    "  Step 2 — READ THE FRONT CAMERA: Describe what is visible ahead. "
+    "Connect camera observations to BEV objects — which BEV boxes correspond to "
+    "what you can see in the camera?\n"
+    "  Step 3 — CONFIRM WITH GT DATA: Use exact numerical values from GROUND TRUTH "
+    "DATA. Do all calculations here (TTC, stopping distance, lateral gap). "
+    "Never invent numbers — every figure must come from GT data.\n"
+    "  Step 4 — DRIVING DECISION: State a clear specific action grounded in "
+    "the numbers from Step 3.\n\n"
+
     "Always respond in this exact format:\n"
     "<think>\n"
-    "[BEV] What you observe in the BEV map image.\n"
+    "[BEV] What you observe in the BEV map — objects, positions, arrow types.\n"
     "[CAM] What you observe in the front camera image.\n"
     "[GT]  Exact values from GT data + calculations.\n"
     "[DECISION] Recommended action and physical justification.\n"
@@ -149,19 +186,20 @@ COSMOS_SYSTEM_PROMPT = (
 
 FORMAT_INSTRUCTION = ""  # Format is fully specified in system prompt
 
-# ── Cosmos 8B parameters ───────────────────────────────────────────────────────
 # ── Cosmos 8B inference parameters ────────────────────────────────────────────
-# max_tokens: 4000 is safe for 4090 with 8192 context.
-#   Input budget ~3518t + output 4000t = 7518t < 8192. Comfortable headroom.
-#   4000 output tokens is generous — reasoning chains typically run 1000-2000t.
-#
-# For A100 80GB (cloud, 16384 context): bump max_tokens to 8000.
+# Cloud (L40S 48GB, 16384 context):
+#   3 images ~3072t + text ~1200t = ~4272t input → 6000t output budget → total 10272t < 16384 ✅
+# Local 4090 (8192 context):
+#   Change max_tokens to 3500 AND CAMERA_FILENAMES to ["CAM_FRONT.jpg"] only
 COSMOS_PARAMS = {
-    "model": "nvidia/Cosmos-Reason2-8B",
-    "max_tokens": 4000,
-    "temperature": 0.6,
-    "top_p": 0.95,
-    "presence_penalty": 0.0,
+    "model":             "nvidia/Cosmos-Reason2-8B",  # 8B: stable, no language bleed
+    "max_tokens":        4096,   # 8B chains run 1500-2500 tokens; 4096 gives headroom
+    "temperature":       0.6,
+    "top_p":             0.95,
+    "presence_penalty":  0.1,    # discourages repetition loops
+    "frequency_penalty": 0.05,   # mild frequency penalty reduces looping further
+    # Do NOT use Cosmos-Reason2-2B — produces language bleed (Chinese/Arabic mid-response)
+    # and repetition loops that corrupt training data. Confirmed broken on RTX 4090.
 }
 
 # ── Question templates ─────────────────────────────────────────────────────────
@@ -314,6 +352,69 @@ QUESTION_TEMPLATES = {
         "4. [DECISION] For the fastest-closing radar-confirmed object: compute its TTC "
         "using radar_velocity_ms. Would a camera-only system have known this velocity "
         "without multiple frames? What action is required?"
+    ),
+
+    # ── Planning ───────────────────────────────────────────────────────────────
+    # What concrete action should the vehicle take RIGHT NOW?
+    # GT-verifiable: recommended action (BRAKE/MAINTAIN etc) can be checked
+    # against rule-based oracle from TTC + stopping distance.
+    # Works entirely from existing detections.json + ego_speed_ms.
+    "planning": (
+        "Look at the BEV map and front camera image, then answer: "
+        "What is the single most important driving action the ego vehicle should "
+        "take RIGHT NOW, and what specific physical evidence justifies it?\n"
+        "In your reasoning:\n"
+        "1. [BEV] Survey the full BEV map. Identify the single highest-priority "
+        "object — the one that most constrains what the vehicle can safely do next. "
+        "Describe its position, apparent motion, and proximity to ego.\n"
+        "2. [CAM] Confirm this priority object in the front camera, or explain why "
+        "it may not be visible (occluded, outside FOV, behind ego). "
+        "What does the camera add about road context — intersection, lane, signal?\n"
+        "3. [GT] From GROUND TRUTH DATA compute for every object within 30m "
+        "(bearing -90 to +90):\n"
+        "   TTC = distance_m / max(ego_speed_ms + velocity_ms, 0.1)\n"
+        "   stopping_dist = ego_speed_ms^2 / (2 x 4.0)\n"
+        "   emergency_dist = ego_speed_ms^2 / (2 x 8.0)\n"
+        "   Find the object with lowest TTC. Show all calculations explicitly.\n"
+        "   Ego speed from EGO STATE.\n"
+        "4. [DECISION] State exactly ONE action and justify with numbers:\n"
+        "   EMERGENCY_BRAKE — TTC < 2.0s OR distance < emergency_dist\n"
+        "   BRAKE           — TTC < 4.0s OR distance < stopping_dist\n"
+        "   YIELD           — TTC 4-6s, moving object nearby\n"
+        "   MAINTAIN        — TTC > 6.0s, no immediate hazard\n"
+        "   STOP            — intersection or crosswalk with pedestrians present\n"
+        "   Format your decision as: ACTION: [action]. REASON: [object] at "
+        "[distance]m, TTC=[value]s, [justification]."
+    ),
+
+    # ── Counterfactual ─────────────────────────────────────────────────────────
+    # What happens if the vehicle does NOTHING for 4 seconds?
+    # Forces causal reasoning about consequences, not just scene description.
+    # This is what separates planning from perception — the model must reason
+    # about outcomes, not just identify objects.
+    # Works entirely from existing detections.json + ego_speed_ms.
+    "counterfactual": (
+        "Look at the BEV map and front camera image, then answer: "
+        "What would happen if the ego vehicle maintained its current speed and "
+        "heading for the next 4 seconds with NO braking or steering?\n"
+        "In your reasoning:\n"
+        "1. [BEV] Identify every object in the forward path (bearing -45 to +45). "
+        "Describe which objects the vehicle would geometrically reach first "
+        "if it continued straight at current speed.\n"
+        "2. [CAM] What does the front camera show directly ahead — is the road "
+        "clear, is there a stopped vehicle, pedestrian, or intersection? "
+        "Would these be unavoidable at current speed?\n"
+        "3. [GT] Using ego_speed_ms from EGO STATE, compute projected position "
+        "at t=1, t=2, t=3, t=4 seconds: projected_dist = ego_speed_ms x t. "
+        "For each object ahead (bearing -45 to +45) check whether "
+        "projected_dist reaches distance_m within 4 seconds. "
+        "Show each check explicitly: 'At t=Xs vehicle reaches Ym. "
+        "[Object] is at Zm — [REACHED / not reached].'\n"
+        "4. [DECISION] Describe the specific outcome if no action is taken: "
+        "name the object hit or nearly missed, time to impact, and severity "
+        "(COLLISION / NEAR-MISS / SAFE PASSAGE). "
+        "Then state the minimum action that prevents the worst outcome and "
+        "quantify it: e.g. braking at 4 m/s^2 gives X extra metres."
     ),
 }
 
@@ -469,9 +570,15 @@ def call_cosmos(
                 },
             })
 
-    # Text block: scene description + full GT JSON + question
+    # Text block: scene description + GT JSON + question
+    # ego_speed_ms is extracted from scene_description and added explicitly
+    # so safety/physics questions can reference it without parsing prose
+    import re as _re
+    ego_speed_match = _re.search(r"ego speed[^:]*:\s*([\d.]+)", scene_description, _re.IGNORECASE)
+    ego_speed_str = f"\nEGO STATE: ego_speed_ms={ego_speed_match.group(1)}" if ego_speed_match else ""
+
     gt_block = (
-        f"\n\nGROUND TRUTH DATA (detections.json — use these exact values):\n"
+        f"\n\nGROUND TRUTH DATA (detections.json — use these exact values):{ego_speed_str}\n"
         f"{detections_json}"
         if detections_json else ""
     )
@@ -483,17 +590,39 @@ def call_cosmos(
             f"{gt_block}\n\n"
             f"QUESTION: {question}\n\n"
             f"IMPORTANT: Respond in English only. "
-            f"Use the exact numerical values from GROUND TRUTH DATA above."
+            f"Use the exact numerical values from GROUND TRUTH DATA above. "
+            f"ego_speed_ms is in EGO STATE above."
         ),
     })
 
-    response = client.chat.completions.create(
-        messages=[
-            {"role": "system", "content": COSMOS_SYSTEM_PROMPT},
-            {"role": "user", "content": user_content},
-        ],
-        **COSMOS_PARAMS,
-    )
+    # Retry up to 3 times on transient errors (server restart, timeout, etc.)
+    max_retries = 3
+    last_error  = None
+    response    = None
+
+    for attempt in range(max_retries):
+        try:
+            response = client.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": COSMOS_SYSTEM_PROMPT},
+                    {"role": "user",   "content": user_content},
+                ],
+                **COSMOS_PARAMS,
+            )
+            break  # success
+        except Exception as e:
+            last_error = e
+            err_str = str(e)
+            # Context overflow — not retryable, raise immediately
+            if "input_tokens" in err_str or "context length" in err_str or "decoder prompt" in err_str:
+                raise
+            # Transient error — wait and retry
+            wait = 10 * (attempt + 1)
+            print(f"\n    [attempt {attempt+1}/{max_retries}] error: {err_str[:120]} — retrying in {wait}s")
+            time.sleep(wait)
+
+    if response is None:
+        raise RuntimeError(f"All {max_retries} attempts failed. Last error: {last_error}")
 
     raw = response.choices[0].message.content or ""
 
@@ -599,6 +728,76 @@ def extract_gt_fields(detections: list[dict], question_type: str) -> dict:
                 "gt_object_class": obj["class"],
             }
 
+    elif question_type == "planning":
+        # GT action: rule-based oracle from TTC + stopping distance.
+        # This gives an evaluable ground truth action for the planning question —
+        # we can check if the model recommended the correct action class.
+        # ego_speed stored separately; use median estimate if not available.
+        EGO_SPEED_FALLBACK = 4.0  # m/s — typical urban speed
+        ahead_30 = [
+            d for d in by_dist
+            if abs(d.get("bearing_deg", 90)) <= 90
+            and d["distance_m"] <= 30
+        ]
+        if ahead_30:
+            # Find minimum TTC object
+            def ttc(d):
+                return d["distance_m"] / max(EGO_SPEED_FALLBACK + d.get("velocity_ms", 0), 0.1)
+            nearest_ttc_obj = min(ahead_30, key=ttc)
+            min_ttc = round(ttc(nearest_ttc_obj), 2)
+            stop_dist = round(EGO_SPEED_FALLBACK**2 / (2 * 4.0), 2)
+            emg_dist  = round(EGO_SPEED_FALLBACK**2 / (2 * 8.0), 2)
+
+            # Rule-based oracle action
+            dist = nearest_ttc_obj["distance_m"]
+            if min_ttc < 2.0 or dist < emg_dist:
+                gt_action = "EMERGENCY_BRAKE"
+            elif min_ttc < 4.0 or dist < stop_dist:
+                gt_action = "BRAKE"
+            elif min_ttc < 6.0:
+                gt_action = "YIELD"
+            else:
+                gt_action = "MAINTAIN"
+
+            gt = {
+                "gt_verifiable":   True,
+                "gt_value":        min_ttc,
+                "gt_field":        "min_ttc_s",
+                "gt_object_class": nearest_ttc_obj["class"],
+                "gt_action":       gt_action,
+                "gt_distance_m":   dist,
+            }
+
+    elif question_type == "counterfactual":
+        # GT outcome: does straight travel at current speed hit anything in 4s?
+        # If yes: COLLISION with that object. If no: SAFE PASSAGE.
+        EGO_SPEED_FALLBACK = 4.0
+        ahead_path = [
+            d for d in by_dist
+            if abs(d.get("bearing_deg", 90)) <= 45
+        ]
+        if ahead_path:
+            nearest_ahead = ahead_path[0]
+            dist = nearest_ahead["distance_m"]
+            t_impact = dist / max(EGO_SPEED_FALLBACK, 0.1)
+            outcome = "COLLISION" if t_impact <= 4.0 else "SAFE_PASSAGE"
+            gt = {
+                "gt_verifiable":   True,
+                "gt_value":        round(t_impact, 2),
+                "gt_field":        "t_impact_s",
+                "gt_object_class": nearest_ahead["class"],
+                "gt_outcome":      outcome,
+                "gt_distance_m":   dist,
+            }
+        else:
+            # No objects directly ahead — safe passage
+            gt = {
+                "gt_verifiable": True,
+                "gt_value":      None,
+                "gt_field":      "t_impact_s",
+                "gt_outcome":    "SAFE_PASSAGE",
+            }
+
     return gt
 
 
@@ -699,29 +898,96 @@ def generate_scene_qa(
     qa_pairs    = []
     total_tokens = 0
 
-    for q_type, question in QUESTION_TEMPLATES.items():
-        if q_type == "radar" and condition not in ("D",):
-            print(f"    [{q_type}] SKIPPED (radar only for condition D)")
-            continue
+    # ── Parallel question generation ──────────────────────────────────────
+    # Send all questions for this scene simultaneously using a thread pool.
+    # vLLM handles concurrent requests with continuous batching — this gives
+    # ~1.5-2x real speedup vs sequential because prefill passes are batched
+    # and decode is overlapped across sequences.
+    # ThreadPoolExecutor is safe here because call_cosmos is I/O bound (HTTP).
+    from concurrent.futures import ThreadPoolExecutor, as_completed
 
-        print(f"    [{q_type}] Querying Cosmos 8B...", end=" ", flush=True)
+    # Build list of (q_type, question) pairs to run
+    active_questions = [
+        (q_type, question)
+        for q_type, question in QUESTION_TEMPLATES.items()
+        if not (q_type == "radar" and condition not in ("D",))
+    ]
+    skipped = [q for q, _ in QUESTION_TEMPLATES.items()
+               if q == "radar" and condition not in ("D",)]
+    for q in skipped:
+        print(f"    [radar] SKIPPED (condition D only)")
+
+    def run_one_question(q_type_question):
+        q_type, question = q_type_question
         t0 = time.time()
+        try:
+            result = call_cosmos(
+                bev_image_b64=bev_b64,
+                scene_description=scene_description,
+                question=question,
+                detections_json=detections_json_str,
+                extra_images=extra_images,
+                api_mode=api_mode,
+                base_url=base_url,
+                api_key=api_key,
+                dry_run=dry_run,
+            )
+        except Exception as e:
+            result = {
+                "reasoning":    f"[ERROR: {e}]",
+                "answer":       "[ERROR]",
+                "raw_response": "",
+                "tokens_used":  0,
+            }
+        elapsed = time.time() - t0
+        return q_type, question, result, elapsed
 
-        result = call_cosmos(
-            bev_image_b64=bev_b64,
-            scene_description=scene_description,
-            question=question,
-            detections_json=detections_json_str,
-            extra_images=extra_images,
-            api_mode=api_mode,
-            base_url=base_url,
-            api_key=api_key,
-            dry_run=dry_run,
-        )
+    # Max workers = number of questions per scene (9 or 10).
+    # vLLM continuous batching handles all concurrent requests efficiently.
+    max_workers = len(active_questions)
+    results_map = {}
+    t_batch_start = time.time()
 
-        elapsed       = time.time() - t0
-        total_tokens += result["tokens_used"]
-        print(f"done ({elapsed:.1f}s, {result['tokens_used']} tokens)")
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(run_one_question, qt): qt[0]
+            for qt in active_questions
+        }
+        for future in as_completed(futures):
+            q_type, question, result, elapsed = future.result()
+            reasoning = result["reasoning"]
+            answer    = result["answer"]
+            is_error  = answer.startswith("[ERROR") or not answer.strip()
+            has_bev   = "[BEV]" in reasoning
+            has_cam   = "[CAM]" in reasoning
+            has_gt    = "[GT]" in reasoning
+            has_dec   = "[DECISION]" in reasoning
+            quality   = "✅" if (has_bev and has_cam and has_gt and has_dec and not is_error) else "⚠️ "
+            missing   = [t for t, ok in [("[BEV]",has_bev),("[CAM]",has_cam),
+                          ("[GT]",has_gt),("[DECISION]",has_dec)] if not ok]
+            if missing and not is_error:
+                print(f"    [{q_type}] {quality} missing: {missing} ({elapsed:.1f}s)")
+            else:
+                print(f"    [{q_type}] done ({elapsed:.1f}s, {result['tokens_used']} tok) {quality}")
+            results_map[q_type] = (question, result, elapsed)
+            total_tokens += result["tokens_used"]
+
+    t_batch_total = time.time() - t_batch_start
+    print(f"  All {len(active_questions)} questions done in {t_batch_total:.1f}s "
+          f"(sequential would be ~{sum(r[2] for r in results_map.values()):.1f}s)")
+
+    # Reassemble qa_pairs in original question order
+    for q_type, _ in QUESTION_TEMPLATES.items():
+        if q_type not in results_map:
+            continue
+        question, result, elapsed = results_map[q_type]
+        reasoning = result["reasoning"]
+        answer    = result["answer"]
+        is_error  = answer.startswith("[ERROR") or not answer.strip()
+        has_bev   = "[BEV]" in reasoning
+        has_cam   = "[CAM]" in reasoning
+        has_gt    = "[GT]" in reasoning
+        has_dec   = "[DECISION]" in reasoning
 
         gt_fields = extract_gt_fields(detections, q_type)
 
@@ -730,14 +996,12 @@ def generate_scene_qa(
             "condition":     condition,
             "question_type": q_type,
             "question":      question,
-            "reasoning":     result["reasoning"],
-            "answer":        result["answer"],
+            "reasoning":     reasoning,
+            "answer":        answer,
+            "quality_ok":    bool(has_bev and has_cam and has_gt and has_dec and not is_error),
             **gt_fields,
         }
         qa_pairs.append(qa_pair)
-
-        if not dry_run:
-            time.sleep(0.5)
 
     # ── Save outputs ───────────────────────────────────────────────────────
     with open(qa_out, "w") as f:
@@ -830,8 +1094,10 @@ def main():
         help="NVIDIA API key (or set NVIDIA_API_KEY env var)")
     parser.add_argument("--dry-run",   action="store_true",
         help="Test file I/O without making API calls")
-    parser.add_argument("--skip-existing", action="store_true",
-        help="Skip scenes already processed (default: regenerate all)")
+    parser.add_argument("--skip-existing", action="store_true", default=True,
+        help="Skip scenes already processed (default: True — safe for cloud runs)")
+    parser.add_argument("--scene-list", default=None,
+        help="Path to txt file with one scene name per line (for trainval runs)")
     parser.add_argument("--check-drivelm-overlap", action="store_true",
         help="Check DriveLM overlap (no API calls)")
     parser.add_argument("--pipeline-root", default=None,
@@ -858,15 +1124,60 @@ def main():
         check_drivelm_overlap(pipeline_root, args.nuscenes_dataroot)
         return
 
-    scenes = [args.scene] if args.scene else CLEAN_SCENES
+    # Build scene list — priority: --scene > --scene-list > CLEAN_SCENES
+    if args.scene:
+        scenes = [args.scene]
+    elif args.scene_list:
+        scene_list_path = Path(args.scene_list)
+        if not scene_list_path.exists():
+            print(f"ERROR: scene list file not found: {scene_list_path}")
+            sys.exit(1)
+        scenes = [s.strip() for s in scene_list_path.read_text().splitlines() if s.strip()]
+        print(f"Scene list:     {scene_list_path} ({len(scenes)} scenes)")
+    else:
+        scenes = CLEAN_SCENES
     print(f"Scenes:         {len(scenes)}")
     if args.dry_run:
         print("DRY RUN — no API calls")
 
     all_qa_pairs = []
 
+    # ── Output paths ──────────────────────────────────────────────────────
+    # crash-safe: per-scene files written inside generate_scene_qa()
+    # incremental concat: written after every scene so crashes don't lose work
+    # final outputs mirror what LLaMA-Factory expects directly
+    cosmos_qa_dir = pipeline_root / "02_cosmos_integration" / "cosmos_qa"
+    cosmos_qa_dir.mkdir(parents=True, exist_ok=True)
+
+    concat_out   = cosmos_qa_dir / f"all_condition{args.condition}_sharegpt.jsonl"
+    train_out    = cosmos_qa_dir / f"train_condition{args.condition}_sharegpt.jsonl"
+    val_out      = cosmos_qa_dir / f"val_condition{args.condition}_sharegpt.jsonl"
+    quality_out  = cosmos_qa_dir / f"quality_condition{args.condition}.json"
+
+    # If resuming — load already-written concat file to avoid double-writing
+    existing_scenes_done = set()
+    if concat_out.exists() and args.skip_existing:
+        with open(concat_out) as f:
+            for line in f:
+                try:
+                    rec = json.loads(line)
+                    sc = rec.get("_meta", {}).get("scene")
+                    if sc:
+                        existing_scenes_done.add(sc)
+                except Exception:
+                    pass
+        if existing_scenes_done:
+            print(f"Resume: {len(existing_scenes_done)} scenes already in concat file")
+
+    # Open concat file in append mode — safe for resume
+    concat_f = open(concat_out, "a", encoding="utf-8")
+
+    scenes_done = 0
+    scenes_failed = 0
+
     for scene_name in scenes:
         print(f"\n── {scene_name} ─────────────────────────────────────────")
+
         qa_pairs = generate_scene_qa(
             scene_name=scene_name,
             condition=args.condition,
@@ -877,75 +1188,160 @@ def main():
             dry_run=args.dry_run,
             skip_existing=args.skip_existing,
         )
+
+        if not qa_pairs:
+            scenes_failed += 1
+            continue
+
         all_qa_pairs.extend(qa_pairs)
+        scenes_done += 1
 
-    # ── Concatenated training file ────────────────────────────────────────
-    concat_out = (
-        pipeline_root
-        / "02_cosmos_integration"
-        / f"all_qa_condition{args.condition}_sharegpt.jsonl"
-    )
-    concat_out.parent.mkdir(parents=True, exist_ok=True)
-
-    with open(concat_out, "w") as f:
-        for qa in all_qa_pairs:
+        # ── Write to concat file immediately after each scene ──────────
+        # This means a crash loses at most ONE scene, not all of them.
+        # Per-scene sharegpt already written inside generate_scene_qa().
+        if scene_name not in existing_scenes_done:
             scene_dir = (
                 pipeline_root / "outputs"
                 / CONDITION_DIRS[args.condition]
-                / qa["scene"]
+                / scene_name
             )
-            # Rebuild image list for this scene
             image_paths = [str(scene_dir / "bev_map.png")]
-            # condition D bev_map.png already has radar overlay
             for cam_filename in CAMERA_FILENAMES:
                 p = scene_dir / cam_filename
                 if p.exists():
                     image_paths.append(str(p))
+            n_images   = len(image_paths)
+            img_tokens = "".join(["<image>\n"] * n_images)
 
-            n_images = len(image_paths)
-            image_tokens = "".join(["<image>\n"] * n_images)
+            for qa in qa_pairs:
+                record = {
+                    "messages": [
+                        {
+                            "role":    "user",
+                            "content": f"{img_tokens}{qa['question']}",
+                        },
+                        {
+                            "role":    "assistant",
+                            "content": (
+                                f"<think>\n{qa['reasoning']}\n</think>\n\n"
+                                f"<answer>\n{qa['answer']}\n</answer>"
+                                if qa.get("reasoning") else qa.get("answer", "")
+                            ),
+                        },
+                    ],
+                    "images": image_paths,
+                    "_meta": {
+                        "scene":         qa["scene"],
+                        "condition":     qa["condition"],
+                        "question_type": qa["question_type"],
+                        "quality_ok":    qa.get("quality_ok", False),
+                        "gt_verifiable": qa.get("gt_verifiable", False),
+                        "gt_value":      qa.get("gt_value"),
+                        "gt_field":      qa.get("gt_field"),
+                        "gt_action":     qa.get("gt_action"),
+                        "gt_outcome":    qa.get("gt_outcome"),
+                    },
+                }
+                concat_f.write(json.dumps(record, ensure_ascii=False) + "\n")
+            concat_f.flush()  # flush after each scene — survive power loss
 
-            record = {
-                "messages": [
-                    {
-                        "role":    "user",
-                        "content": f"{image_tokens}{qa['question']}",
-                    },
-                    {
-                        "role":    "assistant",
-                        "content": (
-                            f"<think>\n{qa['reasoning']}\n</think>\n\n"
-                            f"<answer>\n{qa['answer']}\n</answer>"
-                            if qa["reasoning"] else qa["answer"]
-                        ),
-                    },
-                ],
-                "images": image_paths,
-                "_meta": {
-                    "scene":         qa["scene"],
-                    "condition":     qa["condition"],
-                    "question_type": qa["question_type"],
-                    "gt_verifiable": qa.get("gt_verifiable", False),
-                    "gt_value":      qa.get("gt_value"),
-                    "gt_field":      qa.get("gt_field"),
-                },
-            }
-            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        print(f"  Progress: {scenes_done}/{len(scenes)} scenes done")
+
+    concat_f.close()
+
+    # ── Train / val split (90/10 by scene, not by QA pair) ────────────────
+    # Split by scene so same scene never appears in both train and val.
+    # This is the correct split — splitting by QA pair would leak scene context.
+    import random
+    random.seed(42)  # reproducible split
+
+    # Re-read the full concat file to do the split cleanly
+    all_records = []
+    scene_to_records: dict = {}
+    with open(concat_out) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rec = json.loads(line)
+                sc  = rec.get("_meta", {}).get("scene", "unknown")
+                scene_to_records.setdefault(sc, []).append(rec)
+                all_records.append(rec)
+            except Exception:
+                pass
+
+    all_scene_names = list(scene_to_records.keys())
+    random.shuffle(all_scene_names)
+    n_val   = max(1, len(all_scene_names) // 10)   # 10% val
+    val_scenes   = set(all_scene_names[:n_val])
+    train_scenes = set(all_scene_names[n_val:])
+
+    with open(train_out, "w", encoding="utf-8") as tf, \
+         open(val_out,   "w", encoding="utf-8") as vf:
+        for rec in all_records:
+            sc = rec.get("_meta", {}).get("scene", "unknown")
+            line = json.dumps(rec, ensure_ascii=False) + "\n"
+            if sc in val_scenes:
+                vf.write(line)
+            else:
+                tf.write(line)
+
+    n_train = sum(len(v) for k,v in scene_to_records.items() if k in train_scenes)
+    n_val_r = sum(len(v) for k,v in scene_to_records.items() if k in val_scenes)
 
     print(f"\n{'='*60}")
-    print(f"DONE: {len(all_qa_pairs)} total QA pairs")
-    print(f"Training file → {concat_out}")
+    print(f"DONE — condition {args.condition}")
+    print(f"  Scenes processed:  {scenes_done} ok, {scenes_failed} failed")
+    print(f"  Total QA pairs:    {len(all_records)}")
+    print(f"  Train:             {n_train} pairs ({len(train_scenes)} scenes) → {train_out.name}")
+    print(f"  Val:               {n_val_r} pairs ({len(val_scenes)} scenes)   → {val_out.name}")
+    print(f"  Full concat:       {len(all_records)} pairs → {concat_out.name}")
     print(f"{'='*60}")
+    print(f"\nOutput directory: {cosmos_qa_dir}")
+    print(f"  {concat_out.name}")
+    print(f"  {train_out.name}   ← use this for LLaMA-Factory training")
+    print(f"  {val_out.name}     ← use this for LLaMA-Factory eval_dataset")
 
-    verifiable = [qa for qa in all_qa_pairs if qa.get("gt_verifiable")]
-    print(f"GT-verifiable: {len(verifiable)}/{len(all_qa_pairs)}")
-    by_type: dict[str, int] = {}
-    for qa in all_qa_pairs:
-        qt = qa["question_type"]
-        by_type[qt] = by_type.get(qt, 0) + 1
-    print("By type:")
-    for qt, count in sorted(by_type.items()):
-        print(f"  {qt}: {count}")
+    # ── Quality summary ────────────────────────────────────────────────────
+    quality_ok = [r for r in all_records if r.get("_meta",{}).get("quality_ok", False)]
+    errored    = [r for r in all_records
+                  if r.get("messages",[{}])[1].get("content","").startswith("<answer>\n[ERROR")]
+
+    print(f"\nQUALITY:")
+    print(f"  Full quality (✅): {len(quality_ok)}/{len(all_records)} "
+          f"({100*len(quality_ok)//max(len(all_records),1)}%)")
+    print(f"  Errored:           {len(errored)}")
+
+    by_type: dict = {}
+    for r in all_records:
+        qt = r.get("_meta",{}).get("question_type","unknown")
+        qok = r.get("_meta",{}).get("quality_ok", False)
+        by_type.setdefault(qt, {"total":0, "ok":0})
+        by_type[qt]["total"] += 1
+        if qok:
+            by_type[qt]["ok"] += 1
+    print("\nBy question type:")
+    for qt, counts in sorted(by_type.items()):
+        pct = 100*counts["ok"]//max(counts["total"],1)
+        print(f"  {qt:14s}: {counts['total']:3d} total, {counts['ok']:3d} ok ({pct}%)")
+
+    # Save quality report JSON
+    report = {
+        "condition":        args.condition,
+        "scenes_processed": scenes_done,
+        "scenes_failed":    scenes_failed,
+        "total_qa_pairs":   len(all_records),
+        "quality_ok":       len(quality_ok),
+        "errored":          len(errored),
+        "train_pairs":      n_train,
+        "val_pairs":        n_val_r,
+        "train_scenes":     sorted(train_scenes),
+        "val_scenes":       sorted(val_scenes),
+        "by_question_type": by_type,
+    }
+    quality_out.write_text(json.dumps(report, indent=2))
+    print(f"\nQuality report → {quality_out}")
 
 
 if __name__ == "__main__":
