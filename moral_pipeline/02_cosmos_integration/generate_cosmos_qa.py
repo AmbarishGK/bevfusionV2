@@ -193,7 +193,8 @@ FORMAT_INSTRUCTION = ""  # Format is fully specified in system prompt
 #   Change max_tokens to 3500 AND CAMERA_FILENAMES to ["CAM_FRONT.jpg"] only
 COSMOS_PARAMS = {
     "model":             "nvidia/Cosmos-Reason2-8B",  # 8B: stable, no language bleed
-    "max_tokens":        4096,   # 8B chains run 1500-2500 tokens; 4096 gives headroom
+    "max_tokens":        3500,   # 4090 (8192 ctx): input ~4097t → 3500 output fits safely
+                                 # Cloud L40S (16384 ctx): change to 6000
     "temperature":       0.6,
     "top_p":             0.95,
     "presence_penalty":  0.1,    # discourages repetition loops
@@ -933,8 +934,10 @@ def generate_scene_qa(
                 dry_run=dry_run,
             )
         except Exception as e:
+            err_msg = str(e)
+            print(f"\n    [{q_type_question[0]}] EXCEPTION: {err_msg[:200]}")
             result = {
-                "reasoning":    f"[ERROR: {e}]",
+                "reasoning":    f"[ERROR: {err_msg}]",
                 "answer":       "[ERROR]",
                 "raw_response": "",
                 "tokens_used":  0,
@@ -1094,8 +1097,8 @@ def main():
         help="NVIDIA API key (or set NVIDIA_API_KEY env var)")
     parser.add_argument("--dry-run",   action="store_true",
         help="Test file I/O without making API calls")
-    parser.add_argument("--skip-existing", action="store_true", default=True,
-        help="Skip scenes already processed (default: True — safe for cloud runs)")
+    parser.add_argument("--no-skip", action="store_true", default=False,
+        help="Force regenerate all scenes even if output already exists")
     parser.add_argument("--scene-list", default=None,
         help="Path to txt file with one scene name per line (for trainval runs)")
     parser.add_argument("--check-drivelm-overlap", action="store_true",
@@ -1119,6 +1122,9 @@ def main():
     print(f"Condition:      {args.condition}")
     print(f"Model:          nvidia/Cosmos-Reason2-8B")
     print(f"API mode:       {args.api_mode}")
+
+    skip_existing = not args.no_skip  # default: skip existing (safe for resume)
+    print(f"Skip existing:  {skip_existing} (use --no-skip to force regenerate)")
 
     if args.check_drivelm_overlap:
         check_drivelm_overlap(pipeline_root, args.nuscenes_dataroot)
@@ -1156,7 +1162,7 @@ def main():
 
     # If resuming — load already-written concat file to avoid double-writing
     existing_scenes_done = set()
-    if concat_out.exists() and args.skip_existing:
+    if concat_out.exists() and skip_existing:
         with open(concat_out) as f:
             for line in f:
                 try:
@@ -1186,7 +1192,7 @@ def main():
             base_url=args.base_url,
             api_key=args.api_key,
             dry_run=args.dry_run,
-            skip_existing=args.skip_existing,
+            skip_existing=skip_existing,
         )
 
         if not qa_pairs:
