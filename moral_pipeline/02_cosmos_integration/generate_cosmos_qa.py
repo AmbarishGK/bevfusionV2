@@ -32,11 +32,24 @@ USAGE:
   python generate_cosmos_qa.py --scene scene-0061 --condition B --api-mode local \\
     --base-url http://localhost:8000/v1 --pipeline-root /home/ubuntu
 
-AWS setup (g5.2xlarge — A10G 24GB):
-  vllm serve nvidia/Cosmos-Reason2-8B \\
-    --max-model-len 16384 \\
-    --reasoning-parser qwen3 \\
+LOCAL SETUP (RTX 4090 24GB — 8192 context, CAM_FRONT only):
+  python3 -m vllm.entrypoints.openai.api_server \
+    --model nvidia/Cosmos-Reason2-8B \
+    --max-model-len 8192 \
+    --gpu-memory-utilization 0.95 \
+    --reasoning-parser qwen3 \
+    --enforce-eager \
     --port 8000
+
+CLOUD SETUP for full dataset (A100 80GB — 16384 context, 3 front cameras):
+  python3 -m vllm.entrypoints.openai.api_server \
+    --model nvidia/Cosmos-Reason2-8B \
+    --max-model-len 16384 \
+    --gpu-memory-utilization 0.85 \
+    --reasoning-parser qwen3 \
+    --port 8000
+  # Restore: CAMERA_FILENAMES = ["CAM_FRONT.jpg","CAM_FRONT_LEFT.jpg","CAM_FRONT_RIGHT.jpg"]
+  # Restore: max_tokens = 8000
 
 SCENE STATUS:
   CLEAN (9 scenes): 0061, 0553, 0655, 0757, 0796, 0916, 1077, 1094, 1100
@@ -72,14 +85,20 @@ CONDITION_DIRS = {
     "D": "02_gt_with_radar",
 }
 
-# Camera images — front 3 only to stay within Cosmos 8B 8192-token context limit.
-# BEV map already encodes all rear objects. Front cameras cover the safety-critical zone.
-# Budget: BEV(~1024t) + 3 front cams(~3072t) + trimmed GT JSON(~800t) + desc(~600t) = ~5500t input
-# leaving ~2700 tokens for CoT — sufficient for thorough reasoning.
+# Camera images — CAM_FRONT only for 4090 (8192 context).
+# BEV map encodes full spatial layout. Front camera covers the safety-critical forward view.
+# FRONT_LEFT/RIGHT each cost ~1024 tokens and push input over context limit on 4090.
+#
+# Token budget (4090 / 8192 context):
+#   System prompt:   ~450t  |  BEV map:     ~1024t  |  CAM_FRONT: ~1024t
+#   GT JSON trimmed: ~400t  |  Scene desc:   ~200t  |  Question:   ~270t
+#   Labels/overhead: ~150t  |  Total input: ~3518t  |  Output:    ~4624t
+#
+# To restore 3 front cameras (A100 80GB cloud, 16384 context), change to:
+#   CAMERA_FILENAMES = ["CAM_FRONT.jpg", "CAM_FRONT_LEFT.jpg", "CAM_FRONT_RIGHT.jpg"]
+#   and set --max-model-len 16384 on the vLLM server.
 CAMERA_FILENAMES = [
     "CAM_FRONT.jpg",
-    "CAM_FRONT_LEFT.jpg",
-    "CAM_FRONT_RIGHT.jpg",
 ]
 
 # ── System prompt ──────────────────────────────────────────────────────────────
@@ -131,9 +150,15 @@ COSMOS_SYSTEM_PROMPT = (
 FORMAT_INSTRUCTION = ""  # Format is fully specified in system prompt
 
 # ── Cosmos 8B parameters ───────────────────────────────────────────────────────
+# ── Cosmos 8B inference parameters ────────────────────────────────────────────
+# max_tokens: 4000 is safe for 4090 with 8192 context.
+#   Input budget ~3518t + output 4000t = 7518t < 8192. Comfortable headroom.
+#   4000 output tokens is generous — reasoning chains typically run 1000-2000t.
+#
+# For A100 80GB (cloud, 16384 context): bump max_tokens to 8000.
 COSMOS_PARAMS = {
     "model": "nvidia/Cosmos-Reason2-8B",
-    "max_tokens": 4096,
+    "max_tokens": 4000,
     "temperature": 0.6,
     "top_p": 0.95,
     "presence_penalty": 0.0,
@@ -629,14 +654,24 @@ def generate_scene_qa(
         # Dropping: x, y, z, yaw_rad, ann_token, num_radar_pts, radar_vx, radar_vy,
         #           radar_rcs, source, confidence, height_m
         # Keeping: all fields referenced in any question template.
+        # Keep only the 6 fields actually referenced in question templates.
+        # Filter to <=50m — objects beyond that are irrelevant to all question types
+        # and are still visible on the BEV map for spatial context.
+        # Result: ~15-20 objects x 6 fields = ~350-450 tokens (was 8500+ tokens for 66 objects).
+        # Fields dropped: x, y, z, yaw_rad, vx, vy, ann_token, source, confidence,
+        #                 height_m, num_lidar_pts, num_radar_pts, radar_vx, radar_vy, radar_rcs
         KEEP_FIELDS = {
             "class", "distance_m", "bearing_deg",
-            "velocity_ms", "vx", "vy",
-            "visibility", "num_lidar_pts",
+            "velocity_ms", "visibility", "width_m",
             "radar_velocity_ms", "radar_velocity_confirmed", "radar_quality",
-            "width_m", "length_m",
         }
-        trimmed = [{k: v for k, v in d.items() if k in KEEP_FIELDS} for d in detections]
+        trimmed = [
+            {k: v for k, v in d.items() if k in KEEP_FIELDS}
+            for d in detections
+            if d.get("distance_m", 999) <= 50.0
+        ]
+        # Sort nearest-first so model sees the most relevant objects immediately
+        trimmed = sorted(trimmed, key=lambda x: x.get("distance_m", 999))
         detections_json_str = json.dumps(trimmed, separators=(",", ":"))
 
     # ── Build extra images list ────────────────────────────────────────────
