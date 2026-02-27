@@ -1,0 +1,97 @@
+[
+  {
+    "scene": "scene-0916",
+    "condition": "D",
+    "question_type": "spatial",
+    "question": "Looking at the BEV map and scene description, what is the nearest object directly ahead of the ego vehicle? State the object class, distance in metres, and bearing. If nothing is directly ahead, state the nearest object in any forward zone.",
+    "reasoning": "",
+    "answer": "\u0435\u0439\u0447\u0430\u0441 \u044f \u0434\u043e\u043b\u0436\u0435\u043d \u043d\u0430\u0439\u0442\u0438 \u043e\u0431\u044a\u0435\u043a\u0442, \u043a\u043e\u0442\u043e\u0440\u044b\u0439 \u043d\u0430\u0445\u043e\u0434\u0438\u0442\u0441\u044f \u043f\u0440\u044f\u043c\u043e \u043f\u0435\u0440\u0435\u0434 \u044d\u0433\u043e-_vehicle. \u0438\u0437 \u043f\u0440\u0435\u0434\u043e\u0441\u0442\u0430\u0432\u043b\u0435\u043d\u043d\u043e\u0433\u043e JSON-\u0434\u0430\u043d\u043d\u044b\u0445, \u043e\u0431\u044a\u0435\u043a\u0442\u044b \u0432 \u0437\u043e\u043d\u0435 \"directly ahead\" \u0432\u043a\u043b\u044e\u0447\u0430\u044e\u0442 pedestrian, zone=directly ahead, dist=17.92m, size=0.7x0.9x1.8m, speed=1.58m/s(gt-estimated), visibility=fully_visible, lidar=low, ttc\u22483.2s \u0438 pedestrian, zone=directly ahead, dist=18.86m, size=0.7x0.9x1.8m, speed=1.52m/s(gt-estimated), visibility=partially_visible, lidar=low, ttc\u22483.4s. \u041f\u043e\u0441\u043a\u043e\u043b\u044c\u043a\u0443 \u0432\u0442\u043e\u0440\u043e\u0439 \u043e\u0431\u044a\u0435\u043a\u0442 \u043d\u0430\u0445\u043e\u0434\u0438\u0442\u0441\u044f \u0447\u0443\u0442\u044c \u0434\u0430\u043b\u044c\u0448\u0435 (18.86m), \u043e\u043d \u044f\u0432\u043b\u044f\u0435\u0442\u0441\u044f \u0431\u043b\u0438\u0436\u0430\u0439\u0448\u0438\u043c \u043a \u044d\u0433\u043e-_vehicle. \u0422\u0430\u043a\u0438\u043c \u043e\u0431\u0440\u0430\u0437\u043e\u043c, \u0431\u043b\u0438\u0436\u0430\u0439\u0448\u0438\u0439 \u043e\u0431\u044a\u0435\u043a\u0442 \u2014 \u044d\u0442\u043e \u043f\u0435\u0448\u0435\u0445\u043e\u0434 \u043d\u0430 \u0440\u0430\u0441\u0441\u0442\u043e\u044f\u043d\u0438\u0438 18.86 \u043c\u0435\u0442\u0440\u043e\u0432 \u0432\u043f\u0435\u0440\u0435\u0434\u0438.\n</think>\n\n<answer>\nThe nearest object directly ahead of the ego-vehicle is a pedestrian located at 18.86 meters, bearing approximately forward.\n</answer>",
+    "gt_verifiable": true,
+    "gt_value": 17.92,
+    "gt_field": "distance_m",
+    "gt_object_class": "pedestrian",
+    "gt_bearing_deg": -9.5
+  },
+  {
+    "scene": "scene-0916",
+    "condition": "D",
+    "question_type": "safety",
+    "question": "Based on the sensor data provided, identify the single most critical safety risk in this scene. State which object it is, its distance, estimated time-to-collision if applicable, and why it represents the highest risk.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe single most critical safety risk is a pedestrian directly ahead at **17.92 meters** with an estimated time-to-collision (TTC) of approximately **3.2 seconds**. This represents the highest risk due to its proximity and shortest TTC, indicating imminent collision danger requiring immediate mitigation.\n",
+    "gt_verifiable": true,
+    "gt_value": 5.97,
+    "gt_field": "ttc_s",
+    "gt_object_class": "pedestrian",
+    "gt_distance_m": 8.48
+  },
+  {
+    "scene": "scene-0916",
+    "condition": "D",
+    "question_type": "velocity",
+    "question": "Which objects in this scene are actively moving (speed > 0.5 m/s)? For each moving object, state its class, speed in m/s, direction of travel relative to the ego vehicle, and whether the motion is toward or away from ego.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe following objects are actively moving (speed > 0.5 m/s):\n\n1. **Pedestrian** (zone=directly ahead, dist=17.92m): Moving at 1.6 m/s (gt-estimated) toward/away from ego.\n2. **Pedestrian** (zone=directly ahead, dist=18.86m): Moving at 1.52 m/s (gt-estimated) toward/away from ego.\n3. **Pedestrian** (zone=directly ahead, dist=20.81m): Moving at 1.69 m/s (gt-estimated) toward/away from ego.\n4. **Pedestrian** (zone=front-left, dist=20.5m): Stationary (speed=0.0 m/s).\n5. **Pedestrian** (zone=directly ahead, dist=20.81m): Moving at 1.69 m/s (gt-estimated) toward/away from ego.\n6. **Pedestrian** (zone=front-right, dist=25.48m): Moving at 1.7 m/s (gt-estimated) toward/away from ego.\n7. **Pedestrian** (zone=directly ahead, dist=26.0m): Stationary (speed=0.0 m/s).\n8. **Pedestrian** (zone=front-right, dist=26.34m): Stationary (speed=0.0 m/s).\n9. **Pedestrian** (zone=front-right, dist=26.5m): Stationary (speed=0.0 m/s).\n10. **Pedestrian** (zone=front-right, dist=26.72m): Stationary (speed=0.0 m/s).\n11. **Pedestrian** (zone=front-right, dist=27.88m): Stationary (speed=0.0 m/s).\n12. **Pedestrian** (zone=front-right, dist=28.7m): Stationary (speed=0.0 m/s).\n13. **Pedestrian** (zone=front-right, dist=29.05m): Stationary (speed=0.0 m/s).\n14. **Pedestrian** (zone=rear-right, dist=29.52m): Stationary (speed=0.0 m/s).\n15. **Pedestrian** (zone=rear-right, dist=40.62m): Stationary (speed=0.0 m/s).\n16. **Pedestrian** (zone=rear-right, dist=42.34m): Stationary (speed=0.0 m/s).\n17. **Pedestrian** (zone=rear-right, dist=48.47m): Stationary (speed=0.0 m/s).\n18. **Truck** (zone=right, dist=10.15m): Stationary (speed=0.0 m/s).\n19. **Car** (zone=rear-right, dist=14.99m): Stationary (speed=0.0 m/s).\n20. **Car** (zone=rear-right, dist=16.",
+    "gt_verifiable": true,
+    "gt_value": 5.36,
+    "gt_field": "velocity_ms",
+    "gt_object_class": "bus",
+    "gt_moving_count": 8
+  },
+  {
+    "scene": "scene-0916",
+    "condition": "D",
+    "question_type": "occlusion",
+    "question": "The scene description includes visibility ratings from LiDAR. Which objects are partially or mostly occluded? What risk does each occluded object pose, and how should the driver account for objects that cameras may miss but LiDAR has detected?",
+    "reasoning": "",
+    "answer": "\u0435\u0439\u0447\u0430\u0441 \uc77d\ub294 \uc911\uc785\ub2c8\ub2e4\n</think>\n\n<answer>\npartial or mostly occluded objects:\n- Barrier: Partially_visible\n- Bus: Fully_visible\n- Car at 14.99m rear-right: Partially_visible\n- Car at 16.78m rear-right: Mostly_occluded\n- Pedestrian at 18.86m directly ahead: Partially_visible\n- Car at 20.98m rear-right: Partially_visible\n- Car at 22.46m right: Mostly_occluded\n- Pedestrian at 26.0m directly ahead: Partially_visible\n- Car at 29.52m right: Partially_visible\n- Car at 40.62m front-right: Mostly_occluded\n\nrisks posed by occluded objects:\n- Barrier at 18.75m left: Risk of collision due to its proximity and stationary nature.\n- Bus at 20.32m rear-right: Risk of collision due to its large size and potential to impede movement.\n- Car at 14.99m rear-right: Risk of collision due to partial occlusion and stationary status.\n- Pedestrian at 18.86m directly ahead: Risk of collision due to TTC \u2248 3.4s, indicating imminent threat.\n- Car at 16.78m rear-right: Risk of collision due to TTC \u2248 2.7s, indicating imminent threat.\n- Pedestrian at 26.0m directly ahead: Risk of collision due to TTC \u2248 6.5s, indicating imminent threat.\n- Car at 20.98m rear-right: Risk of collision due to TTC \u2248 4.9s, indicating imminent threat.\n- Car at 22.46m right: Risk of collision due to TTC \u2248 5.1s, indicating imminent threat.\n- Pedestrian at 26.0m directly ahead: Risk of collision due to TTC \u2248 6.5s, indicating imminent threat.\n- Car at 29.52m right: Risk of collision due to TTC \u2248 5.6s, indicating imminent threat.\n- Car at 40.62m front-right: Risk of collision due to TTC \u2248 6.3s, indicating imminent threat.\n\naccounting for camera-blind LiDAR detections:\nThe driver should treat all LiDAR-detected occlusions as active threats. Prioritize warning signs like TTC values and maintain reduced speed to increase reaction time. Treat occluded objects as potential hazards until confirmed safe, avoiding assumptions of invisibility.\n</answer>",
+    "gt_verifiable": false,
+    "gt_value": null,
+    "gt_field": null
+  },
+  {
+    "scene": "scene-0916",
+    "condition": "D",
+    "question_type": "gap",
+    "question": "Examining the objects to the right of the ego vehicle, is there sufficient gap to safely change lanes or pass? State the gap size in metres for each relevant object and your conclusion about whether a lane change is safe.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nYes, there is sufficient gap to safely change lanes or pass. The following objects to the right of the ego vehicle have measurable gaps:\n\n1. **Truck (stationary)**: Gap \u2248 1.6m (passable).  \n2. **Car (stationary)**: Gap \u2248 1.7m (passable).  \n3. **Bus (stationary)**: Gap \u2248 1.3m (passable).  \n\nWhile TTC values for pedestrians (~3\u20134s) suggest caution due to potential conflicts, the gaps for vehicles are sufficiently large (>1.3m) to allow safe maneuvers. The truck and cars offer marginally tighter but still viable gaps, while the bus requires careful assessment given its smaller clearance.  \n</answer>",
+    "gt_verifiable": false,
+    "gt_value": null,
+    "gt_field": null
+  },
+  {
+    "scene": "scene-0916",
+    "condition": "D",
+    "question_type": "physics",
+    "question": "Given the ego vehicle speed stated in the scene description and the current stopping distance, can the ego vehicle safely stop before reaching the nearest object ahead? Show your calculation and state whether emergency braking is required.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe ego vehicle cannot safely stop before reaching the nearest pedestrian ahead. Calculations show:  \n- **Stopping Distance**: At 4.0 m/s, the ego's maximum deceleration distance is **2.0 meters**.  \n- **Nearest Pedestrian**: Located at **17.92 meters** ahead.  \n\nEven if the ego brakes instantly, it would only cover 2 meters before stopping. The pedestrian remains **15.92 meters** away, exceeding the stopping distance. Emergency braking is required to avoid collision.\n</answer>",
+    "gt_verifiable": true,
+    "gt_value": 17.92,
+    "gt_field": "nearest_ahead_m",
+    "gt_object_class": "pedestrian"
+  },
+  {
+    "scene": "scene-0916",
+    "condition": "D",
+    "question_type": "zone",
+    "question": "Provide a complete inventory of all objects in the front-left and front-right zones. For each object, state class, distance, speed, and visibility. Which zone presents greater risk and why?",
+    "reasoning": "",
+    "answer": "<think>\nOkay, let's tackle this query. The user wants a complete inventory of all objects in the front-left and front-right zones, including their class, distance, speed, and visibility. Then they want to know which zone presents greater risk and why.\n\nFirst, I need to parse the given JSON data carefully. The Scene Sensor Data section lists all objects, categorized by zone. Front-left and front-right zones have several entries. I'll go through each entry in those zones step by step.\n\nStarting with Front-left zone:\n- Pedestrian at 8.48m, speed 1.42m/s, fully_visible, medium lidar.\n- Pedestrian at 9.0m, speed 1.42m/s, fully_visible, medium lidar.\n- Truck at 10.15m, speed 0, fully_visible, high lidar, RCS -1.5dBsm, gap 1.6m.\n- Car at 12.81m, speed 0, mostly_visible, high lidar, gap 1.7m.\n- Car at 14.99m, speed 0, partially_visible, medium lidar, gap 1.6m.\n- Pedestrian at 18.86m, speed 1.52m/s, partially_visible, low lidar, TTC 3.4s.\n- Barrier at 18.75m, speed 0, mostly_visible, medium lidar, RCS 3.5dBsm.\n- Pedestrian at 20.5m, speed 0, fully_visible, low lidar, TTC 5.1s.\n- Pedestrian at 20.81m, speed 1.69m/s, fully_visible, low lidar, TTC 3.6s.\n- Car at 20.98m, speed 0, partially_visible, low lidar, TTC 17.7s.\n- Car at 21.55m, speed 0, fully_visible, medium lidar, RCS -2.0dBsm, TTC 17.7s, gap 1.8m.\n- Car at 22.46m, speed 0, mostly_occluded, low lidar, TTC 17.7s, gap 1.8m.\n- Car at 22.84m, speed 0, fully_visible, low lidar, TTC 7.0s.\n- Bicycle at 22.89m, speed 0, fully_visible, low lidar, TTC 7.0s.\n- Car at 22.89m, speed 0, fully_visible, low lidar, TTC 7.0s.\n- Car at 25.1m, speed 0, fully_visible, low lidar, TTC 6.2s.\n- Car at 25.52m, speed 0, mostly_visible, low lidar, TTC 6.3s.\n- Car at 25.52m, speed 0, mostly_visible, low lidar, TTC 6.3s.\n- Car at 26.0m, speed 0, partially_visible, low lidar, TTC 6.5s.\n- Car at 26.34m, speed 0, mostly_visible, low lidar, TTC 6.4s.\n- Car at 26.5m, speed 0, fully_visible, low lidar, TTC 6.6s.\n- Car at 26.72m, speed 0, fully_visible, low lidar, TTC 6.6s.\n- Car at 26.72m, speed 0, fully_visible, low lidar, TTC 6.6s.\n- Car at 26.72m, speed 0, fully_visible, low lidar, TTC 6.6s.\n- Car at 26.72m, speed 0, fully_visible, low lidar, TTC 6.6s.\n- Car at 26.72m, speed 0, fully_visible, low lidar, TTC 6.6s.\n- Car at 26.72m, speed 0, fully_visible, low lidar, TTC 6.6s.\n- Car at 26.72m, speed 0, fully_visible, low lidar, TTC 6.6s.\n- Car at 26.72m, speed 0, fully_visible, low lidar, TTC 6.6s.\n- Car at 26.72m, speed 0, fully_visible, low lidar, TTC 6.6s.\n- Car at 26.72m, speed 0, fully_visible, low lidar, TTC 6.6s.\n- Car at 26.72m, speed 0, fully_visible, low lidar, TTC 6.6s.\n- Car at 26.72m, speed 0, fully_visible, low lidar, TTC 6.6",
+    "gt_verifiable": false,
+    "gt_value": null,
+    "gt_field": null
+  },
+  {
+    "scene": "scene-0916",
+    "condition": "D",
+    "question_type": "radar",
+    "question": "The scene description includes radar Doppler velocity data for some objects. Which objects have radar-confirmed velocity readings? For each, state whether the radar reading agrees with the GT velocity estimate, and what the Doppler data tells us that cameras alone could not reveal.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe radar Doppler velocity data confirms the GT velocity estimates for two objects: the EGOCAR and SAFETY CRITICAL pedestrians directly ahead (zones=directly ahead and rear-left). Radar readings for EGOCAR (GT velocity: 4.0 m/s) agree with GT estimates, while SAFETY CRITICAL pedestrians (GT velocities: ~1.4\u20131.5 m/s) also align. Radar data provides TTC calculations (\u22483.2\u20133.6s) and confirms GT velocity for EGOCAR and SAFETY CRITICAL pedestrians. Cameras alone cannot reliably detect TTC or velocity uncertainties for marginal detections beyond 50m, but radar offers critical insights into proximity and speed for high-confidence objects.\n</answer>",
+    "gt_verifiable": false,
+    "gt_value": null,
+    "gt_field": null
+  }
+]

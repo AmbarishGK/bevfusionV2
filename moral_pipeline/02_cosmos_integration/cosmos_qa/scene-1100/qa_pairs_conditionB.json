@@ -1,0 +1,86 @@
+[
+  {
+    "scene": "scene-1100",
+    "condition": "B",
+    "question_type": "spatial",
+    "question": "Looking at the BEV map and scene description, what is the nearest object directly ahead of the ego vehicle? State the object class, distance in metres, and bearing. If nothing is directly ahead, state the nearest object in any forward zone.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\ncar, 5.9m, directly ahead\n</answer>",
+    "gt_verifiable": true,
+    "gt_value": 5.9,
+    "gt_field": "distance_m",
+    "gt_object_class": "car",
+    "gt_bearing_deg": -18.6
+  },
+  {
+    "scene": "scene-1100",
+    "condition": "B",
+    "question_type": "safety",
+    "question": "Based on the sensor data provided, identify the single most critical safety risk in this scene. State which object it is, its distance, estimated time-to-collision if applicable, and why it represents the highest risk.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe single most critical safety risk is the car directly ahead at 20.79 meters with an estimated time-to-collision (TTC) of \u22483.7 seconds. This car is moving at 5.6 m/s and poses the greatest threat due to its proximity and speed, making a collision imminent if the ego vehicle fails to react. Its TTC value ranks highest among all critical risks, indicating a critical collision probability.\n</answer>",
+    "gt_verifiable": true,
+    "gt_value": 0.6,
+    "gt_field": "ttc_s",
+    "gt_object_class": "car",
+    "gt_distance_m": 5.9
+  },
+  {
+    "scene": "scene-1100",
+    "condition": "B",
+    "question_type": "velocity",
+    "question": "Which objects in this scene are actively moving (speed > 0.5 m/s)? For each moving object, state its class, speed in m/s, direction of travel relative to the ego vehicle, and whether the motion is toward or away from ego.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe following objects are actively moving (speed > 0.5 m/s):\n\n1. **Car (directly ahead)**  \n   - Class: Car  \n   - Speed: 9.8 m/s  \n   - Direction: Forward (relative to ego)  \n   - Motion: Toward ego  \n\n2. **Car (front-right)**  \n   - Class: Car  \n   - Speed: 3.79 m/s  \n   - Direction: Forward (relative to ego)  \n   - Motion: Toward ego  \n\n3. **Car (rear-right)**  \n   - Class: Car  \n   - Speed: 10.88 m/s  \n   - Direction: Forward (relative to ego)  \n   - Motion: Toward ego  \n\n4. **Car (directly ahead zone 2)**  \n   - Class: Car  \n   - Speed: 9.38 m/s  \n   - Direction: Forward (relative to ego)  \n   - Motion: Toward ego  \n\n5. **Car (directly ahead zone 3)**  \n   - Class: Car  \n   - Speed: 9.0 m/s  \n   - Direction: Forward (relative to ego)  \n   - Motion: Toward ego  \n\n6. **Bus (front-right)**  \n   - Class: Bus  \n   - Speed: Stationary  \n   - Direction: Forward (relative to ego)  \n   - Motion: Stationary  \n\nMarginal detections (beyond 50m or <3 LiDAR pts) are not considered here. Only the six listed above are actively moving. The rear-right car is moving away from the ego vehicle, while all others are moving forward.  \n</answer>",
+    "gt_verifiable": true,
+    "gt_value": 10.88,
+    "gt_field": "velocity_ms",
+    "gt_object_class": "car",
+    "gt_moving_count": 8
+  },
+  {
+    "scene": "scene-1100",
+    "condition": "B",
+    "question_type": "occlusion",
+    "question": "The scene description includes visibility ratings from LiDAR. Which objects are partially or mostly occluded? What risk does each occluded object pose, and how should the driver account for objects that cameras may miss but LiDAR has detected?",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe partially or mostly occluded objects are:\n1. **Pedestrian** at 12.22m rear-left (mostly_occluded, TTC \u2248 8.8s)\n2. **Car** at 15.63m front-right (mostly_occluded, TTC \u2248 4.1s)\n\n**Risk Assessment**:\n- **Pedestrian (12.22m)**: Low immediate risk due to TTC \u2248 8.8s (farther away), but occlusion complicates visibility and mandates cautious assessment of potential surprises.\n- **Car (15.63m)**: High-risk TTC \u2248 4.1s (very close), posing a significant collision hazard requiring immediate attention.\n\n**LiDAR vs. Camera Oversight**:\n- **Marginal detections** (beyond 50m or weak LiDAR returns) like the bus at 26.82m are critical and should be prioritized. Cameras may overlook these, but LiDAR confirms their presence.\n- **Drivers should**: \n  - Prioritize LiDAR-detected objects within 50m (e.g., TTC \u2248 0.6\u20135.1s).\n  - Treat marginal detections as potential surprises but acknowledge their lower reliability.\n  - Maintain heightened awareness for occluded/high-risk objects (e.g., TTC \u2248 3.3s car at 36.42m) and avoid reckless maneuvers near them.",
+    "gt_verifiable": false,
+    "gt_value": null,
+    "gt_field": null
+  },
+  {
+    "scene": "scene-1100",
+    "condition": "B",
+    "question_type": "gap",
+    "question": "Examining the objects to the right of the ego vehicle, is there sufficient gap to safely change lanes or pass? State the gap size in metres for each relevant object and your conclusion about whether a lane change is safe.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nYes, there is sufficient gap to safely change lanes or pass. The nearest object to the right of the ego vehicle is a pedestrian at 18.05 meters, with a TTC (~8.8s) significantly larger than the gap (~18m). The car at 23.53m is farther away and thus not the immediate concern. The pedestrian's stationary state and the TTC calculation confirm no imminent collision risk.\n</answer>",
+    "gt_verifiable": false,
+    "gt_value": null,
+    "gt_field": null
+  },
+  {
+    "scene": "scene-1100",
+    "condition": "B",
+    "question_type": "physics",
+    "question": "Given the ego vehicle speed stated in the scene description and the current stopping distance, can the ego vehicle safely stop before reaching the nearest object ahead? Show your calculation and state whether emergency braking is required.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe ego vehicle is already stopped (speed = 0.0 m/s), so the stopping distance is 0.0 meters. The nearest object (car) is 5.9 meters ahead, but since the ego is stationary, there is no collision risk. Emergency braking is not required because the ego is already at rest. Safe stopping is assured, and the scenario does not involve imminent collision.\n</answer>",
+    "gt_verifiable": true,
+    "gt_value": 5.9,
+    "gt_field": "nearest_ahead_m",
+    "gt_object_class": "car"
+  },
+  {
+    "scene": "scene-1100",
+    "condition": "B",
+    "question_type": "zone",
+    "question": "Provide a complete inventory of all objects in the front-left and front-right zones. For each object, state class, distance, speed, and visibility. Which zone presents greater risk and why?",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nFront-left zone:\n- Pedestrian: 12.22m, speed=1.39m/s(gt-estimated), visibility=mostly_occluded, TTC\u22488.8s.\n\nFront-right zone:\n- Pedestrian: 18.05m, speed=stationary, visibility=fully_visible, TTC-N/A.\n- Car: 15.63m, speed=3.79m/s(gt-estimated), visibility=mostly_occluded, TTC\u22484.1s.\n\nFront-right zone presents greater risk due to the presence of a moving car at a TTC of \u22484.1s, which is comparable to the pedestrian's TTC of \u22488.8s but with the car's higher speed increasing collision likelihood.\n</answer>",
+    "gt_verifiable": false,
+    "gt_value": null,
+    "gt_field": null
+  }
+]

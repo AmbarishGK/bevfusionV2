@@ -1,0 +1,97 @@
+[
+  {
+    "scene": "scene-0553",
+    "condition": "D",
+    "question_type": "spatial",
+    "question": "Looking at the BEV map and scene description, what is the nearest object directly ahead of the ego vehicle? State the object class, distance in metres, and bearing. If nothing is directly ahead, state the nearest object in any forward zone.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe nearest object directly ahead of the ego vehicle is a **bicycle** at **15.84 meters** bearing **forward**, with a TTC of approximately **4.6 seconds**. This object poses a critical safety risk due to its proximity and motion.",
+    "gt_verifiable": true,
+    "gt_value": 15.84,
+    "gt_field": "distance_m",
+    "gt_object_class": "bicycle",
+    "gt_bearing_deg": -20.5
+  },
+  {
+    "scene": "scene-0553",
+    "condition": "D",
+    "question_type": "safety",
+    "question": "Based on the sensor data provided, identify the single most critical safety risk in this scene. State which object it is, its distance, estimated time-to-collision if applicable, and why it represents the highest risk.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe single most critical safety risk is the truck at 7.82m directly behind the ego vehicle. Its estimated time-to-collision (TTC) is \u224878.2s, indicating the longest duration before a collision would occur, making it the highest-risk object in the scene. This distance and TTC suggest the truck poses the greatest threat if not avoided, as there is insufficient time for braking or evasive maneuvers to prevent a catastrophic failure.\n</answer>",
+    "gt_verifiable": true,
+    "gt_value": 4.62,
+    "gt_field": "ttc_s",
+    "gt_object_class": "bicycle",
+    "gt_distance_m": 15.84
+  },
+  {
+    "scene": "scene-0553",
+    "condition": "D",
+    "question_type": "velocity",
+    "question": "Which objects in this scene are actively moving (speed > 0.5 m/s)? For each moving object, state its class, speed in m/s, direction of travel relative to the ego vehicle, and whether the motion is toward or away from ego.",
+    "reasoning": "",
+    "answer": "<think>\nOkay, let's see. The user is asking which objects in the scene are actively moving (speed > 0.5 m/s). I need to go through the SCENE SENSOR DATA and look for any objects with speed values greater than 0.5 m/s.\n\nFirst, I'll check the NEAREST OBJECT PER ZONE section. Directly ahead is a bicycle at 15.84m moving 3.4 m/s. Since 3.4 > 0.5, that's a moving object. Direction is forward relative to ego, so toward.\n\nFront-left has a pedestrian at 17.48m moving 1.1 m/s. 1.1 is also >0.5, so moving forward. Directly behind is a car at 7.03m, speed 0.0, which isn't moving. Left is a car at 3.65m, speed 0.0, stationary. Right is a barrier at 15.72m, speed 0.0, stationary. Rear-left is a truck at 7.82m, speed 0.0, stationary. Rear-right barrier at 15.87m, speed 0.0, stationary. Directly behind another car at 7.03m, speed 0.0, stationary. \n\nThen in OBJECTS WITHIN 50m (high-confidence), there's a bicycle at 15.84m moving 3.4 m/s (same as NEAREST OBJECT PER ZONE). Front-left pedestrian at 17.48m moving 1.1 m/s. Front-left pedestrian again at 17.92m moving 1.47 m/s. Front-left pedestrian at 19.7m moving 1.92 m/s. Front-left pedestrian at 21.79m moving 1.59 m/s. Front-left pedestrian at 22.04m moving 1.39 m/s. Front-left pedestrian at 23.76m moving 1.36 m/s. Barrier at 18.45m, speed 0.0, stationary. Barrier at 18.67m, speed 0.0, stationary. Barrier at 18.67m, speed 0.0, stationary. Barrier at 21.37m, speed 0.0, stationary. Barrier at 24.5m, speed 0.0, stationary. Barrier at 27.77m, speed 0.0, stationary. Car at 39.72m moving 1.95 m/s. Bus at 45.03m moving 2.38 m/s. Bus at 48.81m moving 0.76 m/s.\n\nSo the moving objects are:\n- Bicycle (NEAREST OBJECT PER ZONE): 3.4 m/s forward\n- Pedestrian (NEAREST OBJECT PER ZONE): 1.1 m/s forward\n- Pedestrian (OBJECTS WITHIN 50m): 1.47 m/s forward\n- Pedestrian (OBJECTS WITHIN 50m): 1.92 m/s forward\n- Pedestrian (OBJECTS WITHIN 50m): 1.59 m/s forward\n- Pedestrian (OBJECTS WITHIN 50m): 1.39 m/s forward\n- Pedestrian (OBJECTS WITHIN 50m): 1.36 m/s forward\n- Car (OBJECTS WITHIN 50m): 1.95 m/s forward\n\nTotal of 7 moving objects. Need to check if any others are moving. The BUS at 45.03m is moving 2.38 m/s, which is >0.5. So that's another moving object. Bus at 48.81m is moving 0.76 m/s, which is >0.5. So two buses are moving. \n\nWait, the BUSES are listed as \"bus, zone=front-left, dist=45.03m, speed=2.38m/s(gt-estimated), ...\", and \"bus, zone=front-left, dist=48.81m, speed=0.76m/s(gt-estimated), ...\" So two buses are moving. Are they both in front-left? Yes. So they are moving forward. \n\nSo total moving objects:\n1. Bicycle (NEAREST OBJECT PER ZONE): 3.4 m/s forward\n2. Pedestrian (NEAREST OBJECT PER ZONE): 1.1 m/s forward\n3. Pedestrian (OBJECTS WITHIN 50m): 1.47 m/s forward\n4. Pedestrian (OBJECTS WITHIN 50m): 1.92 m/s forward\n5. Pedestrian (OBJECTS WITHIN 50m): 1.59 m/s forward\n6. Pedestrian (OBJECTS WITHIN 50m): 1.39 m/s forward\n7. Pedestrian (OBJECTS WITHIN 50m): 1.36 m/s forward\n8. Bus (NEAREST OBJECT PER ZONE): 2.38 m/s forward\n9. Bus (OBJECTS WITHIN 50m): 0.76 m/s forward\n\nWait, but the BUSES are listed under OBJECTS WITHIN 50m (high-confidence), so they are within 50m. So Bus at 45.03m is moving 2.38 m/s, Bus at 48.81m is moving 0.76 m/s. Both are moving. So that's two buses. \n\nAre there any other moving objects? Let me check again. The NEAREST OBJECT PER ZONE section lists bicycle, pedestrian, car, barrier, truck, barrier, barrier, barrier, barrier, barrier, barrier, barrier, barrier, barrier, barrier, barrier, barrier, barrier, barrier, barrier, barrier, barrier, barrier, barrier, barrier, barrier, barrier, barrier, barrier, barrier. So only bicycle and pedestrian in NEAREST OBJECT PER ZONE. But OBJECTS WITHIN 50m includes BUSES, so Bus at 45.03m and Bus at 48.81m are moving. \n\nSo total moving objects: Bicycle (NEAREST OBJECT PER ZONE), Pedestrian (NEAREST OBJECT PER ZONE), Pedestrian (OBJECTS WITHIN 50m), Bus (NEAREST OBJECT PER ZONE), Bus (OBJECTS WITHIN 50m). That's 6 moving objects. Wait, but BUSES are listed as BUSSES in OBJECTS WITHIN 50m. Let me recount:\n\nNEAREST OBJECT PER ZONE:\n- Bicycle: 3.4 m/s forward\n- Pedestrian: 1.1 m/s forward\n- Car: 0.0\n- Barrier: 0.0\n- Truck: 0.0\n- Barrier: 0.0\n- Barrier: 0.0\n- Barrier: 0.0\n- Barrier: 0.0\n- Barrier: 0.0\n- Barrier: 0.0\n- Barrier: 0.0\n- Barrier: 0.0\n- Barrier: 0.0\n- Barrier: 0.0\n- Barrier: 0.0\n- Barrier: 0.0\n- Barrier: 0.0\n- Barrier: 0.0\n- Barrier: 0.0\n- Barrier: 0.0\n- Barrier: 0.0\n- Barrier: 0.0\n- Barrier: 0.0\n- Barrier: 0.0\n- Barrier: 0.0\n- Barrier: 0.0\n- Barrier: 0.0\n\nOBJECTS WITHIN 50m (high-confidence):\n- Bicycle: 3.4 m/s forward\n- Pedestrian: 1.1 m/s forward\n- Pedestrian: 1.47 m/s forward\n- Pedestrian: 1.92 m/s forward\n- Pedestrian: 1.59 m/s forward\n- Pedestrian: 1.39 m/s forward\n- Pedestrian: 1.36 m/s forward\n- Bus",
+    "gt_verifiable": true,
+    "gt_value": 3.43,
+    "gt_field": "velocity_ms",
+    "gt_object_class": "bicycle",
+    "gt_moving_count": 13
+  },
+  {
+    "scene": "scene-0553",
+    "condition": "D",
+    "question_type": "occlusion",
+    "question": "The scene description includes visibility ratings from LiDAR. Which objects are partially or mostly occluded? What risk does each occluded object pose, and how should the driver account for objects that cameras may miss but LiDAR has detected?",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe partially or mostly occluded objects and their risks are as follows:\n\n1. **Bicycle (15.84m, TTC \u2248 4.6s)**:\n   - **Risk**: High-speed movement directly ahead poses a collision risk due to its short TTC. Treat this as an immediate hazard requiring mitigation.\n\n2. **Pedestrian(s) (17.48m, TTC \u2248 36.5s)**:\n   - **Risk**: Low-speed movement creates a longer-term threat. Ensure awareness and prepare for potential slowdowns or stops.\n\n3. **Bus(s) (\u226545m, TTC \u226578.2s)**:\n   - **Risk**: Larger, slower-moving objects increase collision probability. Account for them proactively despite their distance.\n\n**Accounting for Missed Cameras**:\n- Treat LiDAR-detected occlusions (bicycle, pedestrians, buses) as critical hazards. Prioritize mitigation for the bicycle and pedestrian due to their shorter TTC values. Maintain heightened caution for buses, acknowledging their potential impact despite distance. Use LiDAR data to supplement camera inputs, ensuring timely responses to undetected threats.\n",
+    "gt_verifiable": false,
+    "gt_value": null,
+    "gt_field": null
+  },
+  {
+    "scene": "scene-0553",
+    "condition": "D",
+    "question_type": "gap",
+    "question": "Examining the objects to the right of the ego vehicle, is there sufficient gap to safely change lanes or pass? State the gap size in metres for each relevant object and your conclusion about whether a lane change is safe.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nYes, there is sufficient gap to safely change lanes or pass. The nearest object to the right of the ego vehicle is a barrier at 15.87 meters, with a TTC (time-to-collision) of approximately 15.87 meters. Since the ego is stopped and the TTC equals the distance, this gap exceeds the minimum safe threshold for overtaking/passing. Additional barriers on the right are farther away (\u226515.87m), so they do not compromise the immediate right-side clearance. The largest gap is 15.87 meters, ensuring safe maneuverability.\n</answer>",
+    "gt_verifiable": false,
+    "gt_value": null,
+    "gt_field": null
+  },
+  {
+    "scene": "scene-0553",
+    "condition": "D",
+    "question_type": "physics",
+    "question": "Given the ego vehicle speed stated in the scene description and the current stopping distance, can the ego vehicle safely stop before reaching the nearest object ahead? Show your calculation and state whether emergency braking is required.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe ego vehicle is currently stationary (speed = 0.0 m/s), so its stopping distance is 0 meters. However, the nearest object ahead is a bicycle at 15.84 meters moving at 3.43 m/s (gt-estimated). Calculating the time-to-collision (TTC):  \n$$\n\\text{TTC} = \\frac{\\text{Distance}}{\\text{Speed}} = \\frac{15.84}{3.43} \\approx 4.6 \\text{ seconds}.\n$$  \nSince the TTC (~4.6 s) is comparable to the ego's stopping time (0 s), the bicycle will collide with the ego before the ego can stop. Emergency braking is required to avoid a crash.\n</answer>",
+    "gt_verifiable": true,
+    "gt_value": 15.84,
+    "gt_field": "nearest_ahead_m",
+    "gt_object_class": "bicycle"
+  },
+  {
+    "scene": "scene-0553",
+    "condition": "D",
+    "question_type": "zone",
+    "question": "Provide a complete inventory of all objects in the front-left and front-right zones. For each object, state class, distance, speed, and visibility. Which zone presents greater risk and why?",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nFront-left Zone Inventory:\n1. Bicycle: 15.84m, 3.4m/s (gt-estimated), fully_visible, medium-risk (fast-moving object).\n2. Pedestrian: 17.48m, 1.1m/s (gt-estimated), mostly_occluded, low-risk (slow, distant).\n3. Pedestrian: 24.89m, 1.36m/s (gt-estimated), fully_visible, low-risk (moderate distance, slow speed).\n\nFront-right Zone Inventory:\n1. Barrier: 15.72m, 0.0m/s (stationary), fully_visible, low-risk (stationary, no threat).\n2. Barrier: 15.87m, 0.0m/s (stationary), fully_visible, low-risk (stationary, no threat).\n3. Barrier: 16.71m, 0.0m/s (stationary), fully_visible, low-risk (stationary, no threat).\n4. Barrier: 16.93m, 0.0m/s (stationary), fully_visible, low-risk (stationary, no threat).\n5. Barrier: 18.45m, 0.0m/s (stationary), fully_visible, low-risk (stationary, no threat).\n6. Barrier: 18.67m, 0.0m/s (stationary), fully_visible, low-risk (stationary, no threat).\n7. Barrier: 19.7m, 0.0m/s (stationary), fully_visible, low-risk (stationary, no threat).\n8. Barrier: 21.37m, 0.0m/s (stationary), fully_visible, low-risk (stationary, no threat).\n9. Barrier: 24.5m, 0.0m/s (stationary), fully_visible, low-risk (stationary, no threat).\n10. Car: 3.65m, 0.0m/s (stationary), fully_visible, low-risk (stationary, no threat).\n\nRisk Assessment:\nFront-left zone presents greater risk due to the bicycle's proximity (15.84m) and speed (3.4m/s), resulting in a TTC (~4.6s). Pedestrians are farther away but slower. Front-right zone has stationary barriers, which pose minimal threat unless collided with. The bicycle's combination of speed and proximity makes front-left the higher-risk zone.\n</answer>",
+    "gt_verifiable": false,
+    "gt_value": null,
+    "gt_field": null
+  },
+  {
+    "scene": "scene-0553",
+    "condition": "D",
+    "question_type": "radar",
+    "question": "The scene description includes radar Doppler velocity data for some objects. Which objects have radar-confirmed velocity readings? For each, state whether the radar reading agrees with the GT velocity estimate, and what the Doppler data tells us that cameras alone could not reveal.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe radar-confirmed velocity readings are present for the following objects:\n- **Bicycle (directly ahead):** GT velocity estimate = 3.43 m/s; Radar Doppler velocity = 3.4 m/s. Radar confirms GT velocity, revealing lateral movement (sideways) perpendicular to the camera's view.\n- **Car (directly behind):** GT velocity estimate = 0 m/s; Radar Doppler velocity = 0 m/s. Radar confirms GT velocity, indicating stationary status.\n\nKey insights from Doppler data:\n1. Radar detects perpendicular velocities (sideways motion) invisible to cameras alone. For instance, the bicycle's lateral speed (3.4 m/s) is measurable via radar but undetectable via camera-only observations.\n2. Radar validates GT velocity estimates for stationary objects (e.g., the car behind), confirming consistency between sensor types.\n3. Doppler velocities highlight dynamic interactions (e.g., bicyclists weaving sideways) that cameras alone cannot capture, emphasizing radar's role in comprehensive scene understanding. \n",
+    "gt_verifiable": false,
+    "gt_value": null,
+    "gt_field": null
+  }
+]

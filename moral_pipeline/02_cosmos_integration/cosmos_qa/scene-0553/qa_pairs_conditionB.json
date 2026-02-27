@@ -1,0 +1,86 @@
+[
+  {
+    "scene": "scene-0553",
+    "condition": "B",
+    "question_type": "spatial",
+    "question": "Looking at the BEV map and scene description, what is the nearest object directly ahead of the ego vehicle? State the object class, distance in metres, and bearing. If nothing is directly ahead, state the nearest object in any forward zone.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe nearest object directly ahead of the ego vehicle is a **bicycle** located at **15.84 meters** bearing **directly ahead**. It is moving at **3.43 m/s (gt-estimated)**, with a TTC (~4.6 seconds) indicating it is the closest threat.\n",
+    "gt_verifiable": true,
+    "gt_value": 15.84,
+    "gt_field": "distance_m",
+    "gt_object_class": "bicycle",
+    "gt_bearing_deg": -20.5
+  },
+  {
+    "scene": "scene-0553",
+    "condition": "B",
+    "question_type": "safety",
+    "question": "Based on the sensor data provided, identify the single most critical safety risk in this scene. State which object it is, its distance, estimated time-to-collision if applicable, and why it represents the highest risk.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe single most critical safety risk is the bicycle directly ahead at **15.84 meters**, with an estimated time-to-collision (TTC) of approximately **4.6 seconds**. This represents the highest risk due to its proximity and short TTC, requiring immediate mitigation of speed or braking distance to avoid a collision. The TTC calculation highlights the urgency of addressing this object, as failing to react would result in a collision within a fraction of a second. Other critical objects, such as the car at 7.03 meters, have a much longer TTC (\u224870.3 seconds), making the bicycle the foremost threat.",
+    "gt_verifiable": true,
+    "gt_value": 4.62,
+    "gt_field": "ttc_s",
+    "gt_object_class": "bicycle",
+    "gt_distance_m": 15.84
+  },
+  {
+    "scene": "scene-0553",
+    "condition": "B",
+    "question_type": "velocity",
+    "question": "Which objects in this scene are actively moving (speed > 0.5 m/s)? For each moving object, state its class, speed in m/s, direction of travel relative to the ego vehicle, and whether the motion is toward or away from ego.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe only object actively moving (speed > 0.5 m/s) is the **bicycle**:\n- **Class**: Bicycle  \n- **Speed**: 3.43 m/s  \n- **Direction**: Directly ahead (toward the ego vehicle)  \n- **Motion**: Toward the ego vehicle (estimated TTC \u2248 4.6s).  \nNo other objects in the scene are moving at speeds exceeding 0.5 m/s.  \n</answer>",
+    "gt_verifiable": true,
+    "gt_value": 3.43,
+    "gt_field": "velocity_ms",
+    "gt_object_class": "bicycle",
+    "gt_moving_count": 13
+  },
+  {
+    "scene": "scene-0553",
+    "condition": "B",
+    "question_type": "occlusion",
+    "question": "The scene description includes visibility ratings from LiDAR. Which objects are partially or mostly occluded? What risk does each occluded object pose, and how should the driver account for objects that cameras may miss but LiDAR has detected?",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe occluded objects and their risks are as follows:\n\n1. **Bicycle (mostly_occluded)**:\n   - **Risk**: TTC \u2248 4.6s. Fast-moving at 3.43 m/s, dangerously close. Requires immediate attention to brake/swerve to avoid collision.\n   - **Driver Action**: Anticipate braking or swerving to evade the cyclist. Maintain heightened awareness of its position and speed.\n\n2. **Pedestrian (mostly_visible)**:\n   - **Risk**: Moving slowly (1.11 m/s) but occluded. Potential for unexpected acceleration/jump-starting.\n   - **Driver Action**: Monitor cautiously, anticipate slowdown/reversal, and prepare for abrupt stops if needed.\n\n3. **Barriers (fully_visible)**:\n   - **Risk**: Static obstacles. Require awareness of spacing/gaps (\u22481.5\u20132.5m) to avoid collisions.\n   - **Driver Action**: Keep path clear of barriers, respect spacing, and avoid sudden maneuvers near them.\n\n**Handling LiDAR-detected but Camera-Missed Objects**:\n- Treat detected obstacles (e.g., pedestrians, cyclists) as potential threats. Trust LiDAR data, anticipate movements, and adjust speed/path proactively. For occluded objects, prioritize TTC and velocity to assess immediacy. Maintain redundancy by cross-verifying with cameras (if available) and relying on LiDAR for critical decisions.\n",
+    "gt_verifiable": false,
+    "gt_value": null,
+    "gt_field": null
+  },
+  {
+    "scene": "scene-0553",
+    "condition": "B",
+    "question_type": "gap",
+    "question": "Examining the objects to the right of the ego vehicle, is there sufficient gap to safely change lanes or pass? State the gap size in metres for each relevant object and your conclusion about whether a lane change is safe.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nYes, there is sufficient gap to safely change lanes or pass. The nearest immobile barriers to the right of the ego vehicle are at 15.72m and 16.71m. Since these distances are significantly greater than the ego's width (2.0m), the required buffer for safe passage/change lanes exceeds the available space. Thus, no collision risk exists.\n</answer>",
+    "gt_verifiable": false,
+    "gt_value": null,
+    "gt_field": null
+  },
+  {
+    "scene": "scene-0553",
+    "condition": "B",
+    "question_type": "physics",
+    "question": "Given the ego vehicle speed stated in the scene description and the current stopping distance, can the ego vehicle safely stop before reaching the nearest object ahead? Show your calculation and state whether emergency braking is required.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe ego vehicle cannot safely stop before reaching the nearest object ahead. The bicycle is 15.84 meters away at 3.43 m/s, and the estimated TTC (time to collision) is \u22484.6 seconds. The bicycle travels \u224815.5 meters in this time, exceeding the ego's stopping distance (0.0 m). Emergency braking is required to avoid collision.\n</answer>",
+    "gt_verifiable": true,
+    "gt_value": 15.84,
+    "gt_field": "nearest_ahead_m",
+    "gt_object_class": "bicycle"
+  },
+  {
+    "scene": "scene-0553",
+    "condition": "B",
+    "question_type": "zone",
+    "question": "Provide a complete inventory of all objects in the front-left and front-right zones. For each object, state class, distance, speed, and visibility. Which zone presents greater risk and why?",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nFront-left Zone:\n1. **Pedestrian**: 17.48m, moving at 1.11m/s (mostly_occluded), visibility: fully_visible.\n2. **Pedestrian**: 24.89m, moving at 0.96m/s (mostly_occluded), visibility: fully_visible.\n\nFront-right Zone:\n1. **Bicycle**: 15.84m, moving at 3.43m/s (gt-estimated), visibility: fully_visible.\n2. **Barrier**: 15.87m, stationary, visibility: fully_visible.\n3. **Barrier**: 16.71m, stationary, visibility: fully_visible.\n4. **Barrier**: 18.67m, stationary, visibility: fully_visible.\n\nGreater Risk Zone: Front-right (Bicycle)\n- **Why**: The bicycle in the front-right zone moves at 3.43m/s, resulting in a TTC (~4.6s) significantly lower than the pedestrians in the front-left zone (TTCs \u224836.5s and 70.3s). Faster-moving objects with shorter distances pose greater risks due to higher collision likelihoods.\n</think>\n",
+    "gt_verifiable": false,
+    "gt_value": null,
+    "gt_field": null
+  }
+]

@@ -1,0 +1,97 @@
+[
+  {
+    "scene": "scene-0757",
+    "condition": "D",
+    "question_type": "spatial",
+    "question": "Looking at the BEV map and scene description, what is the nearest object directly ahead of the ego vehicle? State the object class, distance in metres, and bearing. If nothing is directly ahead, state the nearest object in any forward zone.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe nearest object directly ahead of the ego vehicle is a traffic_cone located at 11.9 meters, with a bearing of forward. It remains stationary and is fully visible in the radar data.\n</answer>",
+    "gt_verifiable": true,
+    "gt_value": 11.9,
+    "gt_field": "distance_m",
+    "gt_object_class": "traffic_cone",
+    "gt_bearing_deg": -13.7
+  },
+  {
+    "scene": "scene-0757",
+    "condition": "D",
+    "question_type": "safety",
+    "question": "Based on the sensor data provided, identify the single most critical safety risk in this scene. State which object it is, its distance, estimated time-to-collision if applicable, and why it represents the highest risk.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe single most critical safety risk is the **traffic_cone** located at **rear-right (5.05m)**. Its estimated time-to-collision (TTC) is approximately **1.0 second**, making it the highest-risk object. This proximity and short TTC indicate an imminent collision threat, requiring immediate braking to avoid a fatal crash. While the construction_vehicle ahead poses a longer-term risk (~3.2s TTC), the traffic cones' extreme immediacy and lack of mitigation measures (e.g., signage, braking) elevate their severity. The EGO vehicle must prioritize evasive action to prevent catastrophic failure due to this critical hazard. \n</answer>",
+    "gt_verifiable": true,
+    "gt_value": 2.07,
+    "gt_field": "ttc_s",
+    "gt_object_class": "car",
+    "gt_distance_m": 11.67
+  },
+  {
+    "scene": "scene-0757",
+    "condition": "D",
+    "question_type": "velocity",
+    "question": "Which objects in this scene are actively moving (speed > 0.5 m/s)? For each moving object, state its class, speed in m/s, direction of travel relative to the ego vehicle, and whether the motion is toward or away from ego.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\n{\n  \"actively_moving_objects\": [\n    {\n      \"class\": \"bus\",\n      \"speed\": 3.0,\n      \"direction\": \"forward\",\n      \"relative_to_ego\": \"forward\"\n    },\n    {\n      \"class\": \"truck\",\n      \"speed\": 7.86,\n      \"direction\": \"backward\",\n      \"relative_to_ego\": \"backward\"\n    }\n  ]\n}\n</answer>",
+    "gt_verifiable": true,
+    "gt_value": 7.57,
+    "gt_field": "velocity_ms",
+    "gt_object_class": "truck",
+    "gt_moving_count": 3
+  },
+  {
+    "scene": "scene-0757",
+    "condition": "D",
+    "question_type": "occlusion",
+    "question": "The scene description includes visibility ratings from LiDAR. Which objects are partially or mostly occluded? What risk does each occluded object pose, and how should the driver account for objects that cameras may miss but LiDAR has detected?",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nNone of the objects listed are partially or mostly occluded within the 50m radius. All detections (except the marginal car at 28.26m) are classified as fully visible due to high confidence LiDAR returns. The marginal detection at 28.26m is beyond the 50m range and thus irrelevant to occlusions. Risk considerations for occluded objects (those with low confidence) would arise from their TTC (time to collision), but none of the listed objects qualify as occluded. The driver should prioritize caution near traffic cones (high TTC \u2248 1\u20133s) and maintain awareness of vehicles beyond the radar's range, acknowledging LiDAR-detected threats despite potential camera blind spots.\n</answer>",
+    "gt_verifiable": false,
+    "gt_value": null,
+    "gt_field": null
+  },
+  {
+    "scene": "scene-0757",
+    "condition": "D",
+    "question_type": "gap",
+    "question": "Examining the objects to the right of the ego vehicle, is there sufficient gap to safely change lanes or pass? State the gap size in metres for each relevant object and your conclusion about whether a lane change is safe.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nNo, there is insufficient gap to safely change lanes or pass to the right of the ego vehicle. The nearest object to the right (traffic_cone at 5.05m) has a TTC \u2248 1.0s, which is shorter than the ego's stopping distance (3.3m). This indicates imminent collision risk, making lane changes or passing unsafe. The construction_vehicle at 16.4m (TTC \u2248 3.2s) and bus at 47.15m are farther away and pose negligible risk for immediate maneuvers.\n</answer>",
+    "gt_verifiable": false,
+    "gt_value": null,
+    "gt_field": null
+  },
+  {
+    "scene": "scene-0757",
+    "condition": "D",
+    "question_type": "physics",
+    "question": "Given the ego vehicle speed stated in the scene description and the current stopping distance, can the ego vehicle safely stop before reaching the nearest object ahead? Show your calculation and state whether emergency braking is required.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe ego vehicle cannot safely stop before reaching the nearest traffic cone ahead. With a stated stopping distance of 3.3 meters at 5.2 m/s, it would take approximately 0.63 seconds to come to a halt. The traffic cone is 11.9 meters ahead, meaning the cone would still be in the path of the vehicle during the braking interval. Emergency braking is required to avoid collision.\n</answer>",
+    "gt_verifiable": true,
+    "gt_value": 11.9,
+    "gt_field": "nearest_ahead_m",
+    "gt_object_class": "traffic_cone"
+  },
+  {
+    "scene": "scene-0757",
+    "condition": "D",
+    "question_type": "zone",
+    "question": "Provide a complete inventory of all objects in the front-left and front-right zones. For each object, state class, distance, speed, and visibility. Which zone presents greater risk and why?",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nFront-left zone:\n- Stationary Car: Distance=11.67m, Speed=5.56m/s (radar-confirmed), Visibility=Fully_visible, Risk=Riskier due to velocity and TTC (~3.2s).\n- Stationary Car: Distance=18.47m, Speed=stationary, Visibility=Fully_visible, Risk=Riskier due to TTC (~3.2s).\n\nFront-right zone:\n- Stationary Traffic Cone: Distance=5.05m, Speed=stationary, Visibility=Fully_visible, Risk=Riskier due to TTC (~2.3s).\n- Stationary Construction Vehicle: Distance=16.4m, Speed=stationary, Visibility=Fully_visible, Risk=Riskier due to TTC (~3.2s) and size.\n\nGreater risk zone: Front-right zone (construction_vehicle). Reason: Longer TTC (~3.2s) and stationary nature increase collision likelihood, compounded by larger size compared to stationary traffic cones (~2.3s TTC).\n</answer>",
+    "gt_verifiable": false,
+    "gt_value": null,
+    "gt_field": null
+  },
+  {
+    "scene": "scene-0757",
+    "condition": "D",
+    "question_type": "radar",
+    "question": "The scene description includes radar Doppler velocity data for some objects. Which objects have radar-confirmed velocity readings? For each, state whether the radar reading agrees with the GT velocity estimate, and what the Doppler data tells us that cameras alone could not reveal.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe radar-confirmed velocity readings are for the **construction_vehicle** and **traffic_cone directly ahead**. Radar confirms the construction_vehicle is stationary (GT: 0 m/s), and the traffic_cone ahead is also stationary (GT: 0 m/s). Radar Doppler velocity data reveals that the **bus front-right** is moving at **3.04 m/s** (GT-estimated), which aligns with radar confirmation. Cameras alone cannot reliably detect these velocities, especially for stationary objects or infer directional motion; Doppler provides quantitative speed/direction data critical for safety calculations (e.g., TTC).\n</answer>",
+    "gt_verifiable": false,
+    "gt_value": null,
+    "gt_field": null
+  }
+]

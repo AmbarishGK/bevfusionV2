@@ -1,0 +1,86 @@
+[
+  {
+    "scene": "scene-0061",
+    "condition": "B",
+    "question_type": "spatial",
+    "question": "Looking at the BEV map and scene description, what is the nearest object directly ahead of the ego vehicle? State the object class, distance in metres, and bearing. If nothing is directly ahead, state the nearest object in any forward zone.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe nearest object directly ahead of the ego-vehicle is a **truck** at **16.84 meters** bearing directly forward.  \n</answer>",
+    "gt_verifiable": true,
+    "gt_value": 12.47,
+    "gt_field": "distance_m",
+    "gt_object_class": "traffic_cone",
+    "gt_bearing_deg": -33.4
+  },
+  {
+    "scene": "scene-0061",
+    "condition": "B",
+    "question_type": "safety",
+    "question": "Based on the sensor data provided, identify the single most critical safety risk in this scene. State which object it is, its distance, estimated time-to-collision if applicable, and why it represents the highest risk.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe single most critical safety risk is the **traffic_cone** located at **12.47 meters** directly in front of the ego vehicle. Its estimated time-to-collision (TTC) is approximately **1.4 seconds**, making it the highest-risk object due to its proximity and short reaction time. This poses the greatest threat because the ego vehicle has minimal warning and little room to brake in time, increasing the likelihood of a collision compared to other hazards like barriers or pedestrians farther away. \n</answer>",
+    "gt_verifiable": true,
+    "gt_value": 9.47,
+    "gt_field": "ttc_s",
+    "gt_object_class": "pedestrian",
+    "gt_distance_m": 12.78
+  },
+  {
+    "scene": "scene-0061",
+    "condition": "B",
+    "question_type": "velocity",
+    "question": "Which objects in this scene are actively moving (speed > 0.5 m/s)? For each moving object, state its class, speed in m/s, direction of travel relative to the ego vehicle, and whether the motion is toward or away from ego.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe following objects are actively moving (speed > 0.5 m/s):\n\n1. **Pedestrian** (front-left, 18.08m): Speed = 1.7 m/s; Traveling toward/away from ego (direction unspecified); Motion is toward/away based on GT estimate.\n2. **Pedestrian** (directly behind, 13.26m): Speed = 0.92 m/s; Traveling toward/away from ego (direction unspecified); Motion is toward/away based on GT estimate.\n3. **Pedestrian** (directly behind, 14.05m): Speed = 1.14 m/s; Traveling toward/away from ego (direction unspecified); Motion is toward/away based on GT estimate.\n4. **Pedestrian** (directly behind, 14.82m): Speed = 1.36",
+    "gt_verifiable": true,
+    "gt_value": 11.26,
+    "gt_field": "velocity_ms",
+    "gt_object_class": "car",
+    "gt_moving_count": 27
+  },
+  {
+    "scene": "scene-0061",
+    "condition": "B",
+    "question_type": "occlusion",
+    "question": "The scene description includes visibility ratings from LiDAR. Which objects are partially or mostly occluded? What risk does each occluded object pose, and how should the driver account for objects that cameras may miss but LiDAR has detected?",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe partially/mostly occluded objects and their risks/risk mitigation strategies are as follows:\n\n1. **Traffic Cone (Front-Right, 12.47m):**\n   - **Risk:** TTC \u2248 1.4s (dangerous proximity).\n   - **Mitigation:** Maintain reduced speed (<5 km/h), increase buffer zone, and prepare to brake/react if the cone unexpectedly emerges from occlusions.\n\n2. **Barrier (Front-Right, 14.18m):**\n   - **Risk:** TTC \u2248 1.6s (significant proximity).\n   - **Mitigation:** Avoid abrupt maneuvers; keep lateral distance (>1.5m), and monitor for partial emergence from occlusions.\n\n3. **Barrier (Front-Right, 14.99m):**\n   - **Risk:** TTC \u2248 1.6s (similar to Barrier 1).\n   - **Mitigation:** Adopt conservative acceleration/deceleration protocols, avoid sharp turns, and anticipate potential partial occlusions.\n\n4. **Pedestrian (Front-Left, 18.08m):**\n   - **Risk:** Partial visibility; TTC unknown but plausible (~2\u20133s).\n   - **Mitigation:** Reduce speed (<8 km/h), scan crosswalks/blind spots, and remain prepared for sudden pedestrian crossings.\n\n**General Guidance for Cameras/Missing Data:**\n- Prioritize LiDAR-detected objects (e.g., barriers, cones) over camera-only detections (e.g., pedestrians, trucks).\n- Maintain emergency braking readiness (<2s reaction time) for TTCs <3s.\n- Avoid abrupt maneuvers near occluded zones (>1m lateral gap recommended).\n- Monitor occlusions continuously, as cameras may miss subtle threats (e.g., pedestrians emerging from shadows).",
+    "gt_verifiable": false,
+    "gt_value": null,
+    "gt_field": null
+  },
+  {
+    "scene": "scene-0061",
+    "condition": "B",
+    "question_type": "gap",
+    "question": "Examining the objects to the right of the ego vehicle, is there sufficient gap to safely change lanes or pass? State the gap size in metres for each relevant object and your conclusion about whether a lane change is safe.",
+    "reasoning": "",
+    "answer": "\u0435\u0439\u0447\u0430\u0441 \u044f \u0434\u043e\u043b\u0436\u0435\u043d \u043f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c \u043e\u0431\u044a\u0435\u043a\u0442\u044b \u0441\u043f\u0440\u0430\u0432\u0430 \u043e\u0442 \u044d\u0433\u043e-\u0432\u044d\u044f \u0438 \u043e\u043f\u0440\u0435\u0434\u0435\u043b\u0438\u0442\u044c, \u0434\u043e\u0441\u0442\u0430\u0442\u043e\u0447\u043d\u043e \u043b\u0438 \u043c\u0435\u0436\u0434\u0443 \u043d\u0438\u043c\u0438 \u043f\u0440\u043e\u0431\u0435\u043b\u0430 \u0434\u043b\u044f \u0431\u0435\u0437\u043e\u043f\u0430\u0441\u043d\u043e\u0433\u043e \u043f\u0435\u0440\u0435\u043a\u043b\u044e\u0447\u0435\u043d\u0438\u044f \u0438\u043b\u0438 \u043f\u0440\u0435\u0432\u044b\u0448\u0435\u043d\u0438\u044f. \n\n\u0432 \u043f\u043e\u0445\u043e\u0436\u0435\u043c \u0433\u0440\u0430\u0444\u0438\u043a\u0435 \u044f \u0432\u0438\u0434\u0435\u043b, \u0447\u0442\u043e \u043e\u0431\u044a\u0435\u043a\u0442\u044b \u0441\u043f\u0440\u0430\u0432\u0430 \u043e\u0442 \u044d\u0433\u043e-\u0432\u044d\u044f \u0432\u043a\u043b\u044e\u0447\u0430\u044e\u0442 \u0442\u0440\u0430\u043c\u0432\u0430\u0439, \u043f\u0435\u0448\u0435\u0445\u043e\u0434\u043e\u0432 \u0438 \u0431\u0430\u0440\u044c\u0435\u0440\u044b. \u041e\u0434\u0438\u043d \u0438\u0437 \u0431\u0430\u0440\u044c\u0435\u0440\u043e\u0432 \u043d\u0430\u0445\u043e\u0434\u0438\u0442\u0441\u044f \u043d\u0430 \u0440\u0430\u0441\u0441\u0442\u043e\u044f\u043d\u0438\u0438 14.99 \u043c\u0435\u0442\u0440\u043e\u0432, \u0430 \u0434\u0440\u0443\u0433\u043e\u0439 - 17.9 \u043c\u0435\u0442\u0440\u043e\u0432. \u041e\u0431\u0430 \u0438\u043c\u0435\u044e\u0442 \u043f\u0440\u043e\u0431\u0435\u043b\u044b, \u043a\u043e\u0442\u043e\u0440\u044b\u0435 \u043c\u043e\u0436\u043d\u043e \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u044c \u0434\u043b\u044f \u0431\u0435\u0437\u043e\u043f\u0430\u0441\u043d\u043e\u0433\u043e \u043f\u0435\u0440\u0435\u0445\u043e\u0434\u0430. \u041e\u0434\u043d\u0430\u043a\u043e, \u0442\u0430\u043a \u043a\u0430\u043a \u043e\u043d\u0438 \u043d\u0430\u0445\u043e\u0434\u044f\u0442\u0441\u044f \u043d\u0430 \u0440\u0430\u0441\u0441\u0442\u043e\u044f\u043d\u0438\u0438 \u0434\u0440\u0443\u0433 \u043e\u0442 \u0434\u0440\u0443\u0433\u0430, \u044d\u0442\u043e \u043c\u043e\u0436\u0435\u0442 \u0431\u044b\u0442\u044c \u043e\u043f\u0430\u0441\u043d\u043e \u0434\u043b\u044f \u0434\u0432\u0438\u0436\u0435\u043d\u0438\u044f. \u041d\u0443\u0436\u043d\u043e \u043f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c \u0440\u0430\u0441\u0441\u0442\u043e\u044f\u043d\u0438\u044f \u043c\u0435\u0436\u0434\u0443 \u0431\u0430\u0440\u044c\u0435\u0440\u0430\u043c\u0438 \u0438 \u0434\u0440\u0443\u0433\u0438\u043c\u0438 \u043e\u0431\u044a\u0435\u043a\u0442\u0430\u043c\u0438.\n\n\u0442\u0430\u043a\u0436\u0435 \u0435\u0441\u0442\u044c \u043f\u0435\u0448\u0435\u0445\u043e\u0434\u044b \u043d\u0430 \u0440\u0430\u0441\u0441\u0442\u043e\u044f\u043d\u0438\u0438 18.08 \u043c\u0435\u0442\u0440\u043e\u0432 \u0438 32.46 \u043c\u0435\u0442\u0440\u043e\u0432. \u042d\u0442\u0438 \u043f\u0435\u0448\u0435\u0445\u043e\u0434\u044b \u043d\u0430\u0445\u043e\u0434\u044f\u0442\u0441\u044f \u0432\u043d\u0435 \u043f\u0440\u044f\u043c\u043e\u0439 \u043b\u0438\u043d\u0438\u0438 \u0434\u0432\u0438\u0436\u0435\u043d\u0438\u044f \u044d\u0433\u043e-\u0432\u044d\u044f, \u043d\u043e \u0438\u0445 \u0441\u043a\u043e\u0440\u043e\u0441\u0442\u044c \u043c\u043e\u0436\u0435\u0442 \u0432\u043b\u0438\u044f\u0442\u044c \u043d\u0430 \u0431\u0435\u0437\u043e\u043f\u0430\u0441\u043d\u043e\u0441\u0442\u044c \u043f\u0435\u0440\u0435\u043a\u043b\u044e\u0447\u0435\u043d\u0438\u044f. \u041f\u0435\u0448\u0435\u0445\u043e\u0434\u044b \u043d\u0430 \u0440\u0430\u0441\u0441\u0442\u043e\u044f\u043d\u0438\u0438 32.46 \u043c\u0435\u0442\u0440\u043e\u0432 \u0434\u0432\u0438\u0436\u0443\u0442\u0441\u044f \u043c\u0435\u0434\u043b\u0435\u043d\u043d\u043e, \u043f\u043e\u044d\u0442\u043e\u043c\u0443 \u043f\u0435\u0440\u0435\u043a\u043b\u044e\u0447\u0435\u043d\u0438\u0435 \u0432\u043e\u0437\u043c\u043e\u0436\u043d\u043e, \u043d\u043e \u043d\u0443\u0436\u043d\u043e \u0431\u044b\u0442\u044c \u043e\u0441\u0442\u043e\u0440\u043e\u0436\u043d\u044b\u043c.\n\n\u0432 \u0437\u0430\u043a\u043b\u044e\u0447\u0435\u043d\u0438\u0435, \u043f\u0440\u043e\u0431\u0435\u043b\u044b \u043c\u0435\u0436\u0434\u0443 \u0431\u0430\u0440\u044c\u0435\u0440\u0430\u043c\u0438 \u043f\u043e\u0437\u0432\u043e\u043b\u044f\u044e\u0442 \u0431\u0435\u0437\u043e\u043f\u0430\u0441\u043d\u043e \u043f\u0440\u043e\u0439\u0442\u0438, \u043d\u043e \u043f\u043e\u0441\u043a\u043e\u043b\u044c\u043a\u0443 \u043e\u043d\u0438 \u043d\u0430\u0445\u043e\u0434\u044f\u0442\u0441\u044f \u043d\u0430 \u0440\u0430\u0441\u0441\u0442\u043e\u044f\u043d\u0438\u0438 \u0434\u0440\u0443\u0433 \u043e\u0442 \u0434\u0440\u0443\u0433\u0430, \u044d\u0442\u043e \u043c\u043e\u0436\u0435\u0442 \u0431\u044b\u0442\u044c \u043e\u043f\u0430\u0441\u043d\u043e. \u041f\u0435\u0448\u0435\u0445\u043e\u0434\u044b \u043d\u0430 \u0440\u0430\u0441\u0441\u0442\u043e\u044f\u043d\u0438\u0438 32.46 \u043c\u0435\u0442\u0440\u043e\u0432 \u0442\u0440\u0435\u0431\u0443\u044e\u0442 \u0432\u043d\u0438\u043c\u0430\u043d\u0438\u044f, \u043d\u043e \u0438\u0445 \u0441\u043a\u043e\u0440\u043e\u0441\u0442\u044c \u043d\u0435 \u0432\u043b\u0438\u044f\u0435\u0442 \u043d\u0430 \u0431\u0435\u0437\u043e\u043f\u0430\u0441\u043d\u043e\u0441\u0442\u044c \u043f\u0435\u0440\u0435\u043a\u043b\u044e\u0447\u0435\u043d\u0438\u044f. \u0422\u0430\u043a\u0438\u043c \u043e\u0431\u0440\u0430\u0437\u043e\u043c, \u0431\u0435\u0437\u043e\u043f\u0430\u0441\u043d\u043e\u0435 \u043f\u0435\u0440\u0435\u043a\u043b\u044e\u0447\u0435\u043d\u0438\u0435 \u0432\u043e\u0437\u043c\u043e\u0436\u043d\u043e \u0442\u043e\u043b\u044c\u043a\u043e \u043f\u0440\u0438 \u043e\u0441\u0442\u043e\u0440\u043e\u0436\u043d\u043e\u0441\u0442\u0438.\n</think>\n\n<answer>\nYes, there is sufficient gap to safely change lanes or pass. Relevant gaps include:\n- **Barrier at 14.99m front-right**: Gap \u2248 1.6s TTC (Time-to-Collision), sufficient for safe passage.\n- **Barrier at 17.9m front-right**: Gap \u2248 1.9s TTC, adequate for cautious maneuvering.\n- **Barrier at 20.13m front-right**: Gap \u2248 2.2s TTC, permissible for safe lane change.\n\nOther objects (e.g., pedestrians at 18.08m/32.46m) are distant and not directly relevant to immediate lane-change safety.\n</answer>",
+    "gt_verifiable": false,
+    "gt_value": null,
+    "gt_field": null
+  },
+  {
+    "scene": "scene-0061",
+    "condition": "B",
+    "question_type": "physics",
+    "question": "Given the ego vehicle speed stated in the scene description and the current stopping distance, can the ego vehicle safely stop before reaching the nearest object ahead? Show your calculation and state whether emergency braking is required.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nYes, the ego vehicle can safely stop before reaching the nearest object ahead. The calculated stopping distance of 10.4 meters at 9.1 m/s is less than the distance to the truck (16.84 meters), ensuring sufficient reaction time to avoid collision. Emergency braking is not required.\n</answer>",
+    "gt_verifiable": true,
+    "gt_value": 12.47,
+    "gt_field": "nearest_ahead_m",
+    "gt_object_class": "traffic_cone"
+  },
+  {
+    "scene": "scene-0061",
+    "condition": "B",
+    "question_type": "zone",
+    "question": "Provide a complete inventory of all objects in the front-left and front-right zones. For each object, state class, distance, speed, and visibility. Which zone presents greater risk and why?",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nFront-left zone:\n- **Pedestrian**: Distance \u224818.08m, Speed \u22481.7m/s (gt-estimated), Visibility: Partially/fully occluded. TTC \u22481.4s (critical).\n- **Pedestrian**: Distance \u224817.97m, Speed \u22481.47m/s (gt-estimated), Visibility: Fully visible. TTC \u22482.0s (marginally critical).\n\nFront-right zone:\n- **Barrier**: Distance \u224814.18m, Speed: Stationary, Visibility: Fully visible. TTC \u22481.6s (critical).\n- **Barrier**: Distance \u224814.99m, Speed: Stationary, Visibility: Mostly occluded. TTC \u22481.6s (critical).\n- **Barrier**: Distance \u224816.0m, Speed: Stationary, Visibility: Fully visible. TTC \u22481.8s (critical).\n- **Traffic Cone**: Distance \u224812.47m, Speed: Stationary, Visibility: Fully visible. TTC \u22481.4s (critical).\n\n**Greater Risk Zone**: Front-left  \n**Reason**: Combines multiple moving entities (pedestrians) with TTC values \u22642s (critical thresholds), whereas front-right has barriers with TTC values \u22481.6s (critical) but no moving threats. The presence of two moving pedestrians in front-left elevates risk beyond the barriers alone in front-right. Critical TTC values from pedestrians in front-left outweigh the TTC of stationary barriers in front-right. \n",
+    "gt_verifiable": false,
+    "gt_value": null,
+    "gt_field": null
+  }
+]

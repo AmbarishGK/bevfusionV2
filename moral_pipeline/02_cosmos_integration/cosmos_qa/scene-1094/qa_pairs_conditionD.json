@@ -1,0 +1,97 @@
+[
+  {
+    "scene": "scene-1094",
+    "condition": "D",
+    "question_type": "spatial",
+    "question": "Looking at the BEV map and scene description, what is the nearest object directly ahead of the ego vehicle? State the object class, distance in metres, and bearing. If nothing is directly ahead, state the nearest object in any forward zone.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe nearest object directly ahead of the ego vehicle is a **car** located at **9.06 meters** with a radar-confirmed speed of **0.63 m/s** (radar-confirmed), positioned in the **directly ahead** zone. The bearing is forward (radial direction from the ego vehicle's centroid). \n</answer>",
+    "gt_verifiable": true,
+    "gt_value": 9.06,
+    "gt_field": "distance_m",
+    "gt_object_class": "car",
+    "gt_bearing_deg": 1.7
+  },
+  {
+    "scene": "scene-1094",
+    "condition": "D",
+    "question_type": "safety",
+    "question": "Based on the sensor data provided, identify the single most critical safety risk in this scene. State which object it is, its distance, estimated time-to-collision if applicable, and why it represents the highest risk.",
+    "reasoning": "",
+    "answer": "\u0435\u0439\u0447\u0430\u0441 \u062f\u0631\u0627\u0633\u062a \u06a9\u0646\u0645\n</think>\n\n<answer>\nThe single most critical safety risk in the scene is the car located at 3.11 meters in front-right of the ego vehicle, moving at 4.13 meters per second. This object represents the highest risk because it is both very close (within the TTC threshold of approximately 22.2 seconds) and traveling at a significant speed, indicating imminent collision potential.\n</answer>",
+    "gt_verifiable": true,
+    "gt_value": 0.75,
+    "gt_field": "ttc_s",
+    "gt_object_class": "car",
+    "gt_distance_m": 3.11
+  },
+  {
+    "scene": "scene-1094",
+    "condition": "D",
+    "question_type": "velocity",
+    "question": "Which objects in this scene are actively moving (speed > 0.5 m/s)? For each moving object, state its class, speed in m/s, direction of travel relative to the ego vehicle, and whether the motion is toward or away from ego.",
+    "reasoning": "",
+    "answer": "<think>\nOkay, let's see. The user wants to know which objects in the scene are actively moving (speed > 0.5 m/s) and their details like class, speed, direction, and whether they're approaching or receding.\n\nFirst, I'll go through the SCENE SENSOR DATA section. The EGO state has a speed of 0.1 m/s, so anything moving faster than that is active. The nearest objects are listed with their distances and speeds. Let me check each one:\n\n1. Car front-right at 9.06m moving 0.63m/s - speed is above 0.5, so active. Direction is directly ahead, so toward ego.\n2. Front-left pedestrian at 12.22m moving 1.63m/s - speed > 0.5, moving toward/away? The zone says \"front-left,\" but direction isn't specified. Wait, the original data mentions \"directly behind: pedestrian at 10.47m...\" but here it's front-left. Hmm, maybe the direction is inferred from the zone. If it's front-left, maybe it's moving away or toward. But the problem states to assume direction based on zone. The zone is \"front-left,\" so perhaps moving toward or away. But the user might expect a direction like \"ahead/left/right/back.\" Wait, the zones are directly ahead, front-left, etc. So \"directly ahead\" is forward, front-left is left, etc. But the speed is 1.63m/s. The question is whether it's toward or away. Since the EGO is at 0.1 m/s, and the pedestrian is moving faster, but direction isn't specified. Wait, the SCENE OVERVIEW says \"radar Doppler velocities included (vehicles only...)\" So for vehicles, Doppler velocity indicates direction. Positive Doppler means moving toward the radar (ego), negative away. But the user's question is about the direction relative to the ego. So if the speed is positive, toward; negative, away. But the SCENE OVERVIEW says \"radar Doppler velocities included (vehicles only...)\" So maybe the velocities are in the radar's frame, i.e., Doppler shift. So if the velocity is positive, moving toward the radar (ego), negative away. But the user's question is about direction relative to ego. So need to convert Doppler sign to direction. Alternatively, maybe the SCENE OVERVIEW's velocity is in meters per second relative to ego. Wait, the SCENE OVERVIEW says \"radar Doppler velocities included (vehicles only...)\" So Doppler velocity is the radar-measured speed, which is signed. So positive = moving toward radar (ego), negative = away. But the user's question is about direction relative to ego. So if the velocity is positive, the object is moving toward the ego; negative, away. But the SCENE OVERVIEW's velocity is given as \"radar-confirmed\" or \"gt-estimated,\" so maybe the signs are correct. But the user's question is about direction relative to ego. So for each moving object, speed > 0.5 m/s, and direction. So need to check if the velocity is positive or negative. Let me check the SCENE OVERVIEW's velocity values:\n\n- Car front-right: 0.63m/s (radar-confirmed) \u2192 positive, so toward ego.\n- Front-left pedestrian: 1.63m/s (gt-estimated) \u2192 positive, toward ego.\n- Front-right",
+    "gt_verifiable": true,
+    "gt_value": 5.87,
+    "gt_field": "velocity_ms",
+    "gt_object_class": "bus",
+    "gt_moving_count": 38
+  },
+  {
+    "scene": "scene-1094",
+    "condition": "D",
+    "question_type": "occlusion",
+    "question": "The scene description includes visibility ratings from LiDAR. Which objects are partially or mostly occluded? What risk does each occluded object pose, and how should the driver account for objects that cameras may miss but LiDAR has detected?",
+    "reasoning": "",
+    "answer": "\u0435\u0439\u0447\u0430\u0441 \uc77d\ub294 \uc911\uc785\ub2c8\ub2e4...",
+    "gt_verifiable": false,
+    "gt_value": null,
+    "gt_field": null
+  },
+  {
+    "scene": "scene-1094",
+    "condition": "D",
+    "question_type": "gap",
+    "question": "Examining the objects to the right of the ego vehicle, is there sufficient gap to safely change lanes or pass? State the gap size in metres for each relevant object and your conclusion about whether a lane change is safe.",
+    "reasoning": "",
+    "answer": "\u0435\u0439\u0447\u0430\u0441 \uc77d\ub294 \uc911\uc785\ub2c8\ub2e4. \uba3c\uc800, \uc9c8\ubb38\uc5d0 \ub2f5\ud558\uae30 \uc704\ud574 \ud604\uc7ac \uc704\uce58\uc5d0\uc11c \uc624\ub978\ucabd\uc5d0 \uc788\ub294 \ubaa8\ub4e0 \uac1d\uccb4\ub4e4\uc744 \ud655\uc778\ud574\uc57c \ud569\ub2c8\ub2e4. \uc8fc\uc5b4\uc9c4 \ub370\uc774\ud130\uc5d0\uc11c EGO(ego_vehicle)\uc758 \uc704\uce58\ub97c \uae30\uc900\uc73c\ub85c \uc624\ub978\ucabd\uc5d0 \uc788\ub294 \uac1d\uccb4\ub4e4\uc744 \ucc3e\uc544\ub0b4\uc57c \ud569\ub2c8\ub2e4. \uc8fc\uc5b4\uc9c4 \uc815\ubcf4\uc5d0 \ub530\ub974\uba74, \uc624\ub978\ucabd\uc5d0 \uc788\ub294 \uac1d\uccb4\ub4e4\uc740 \ub2e4\uc74c\uacfc \uac19\uc2b5\ub2c8\ub2e4:\n\n1. **car** (zone=front-right, dist=3.11m, speed=4.13m/s)\n2. **pedestrian** (zone=front-right, dist=10.2m, speed=stationary)\n3. **car** (zone=directly behind, dist=12.39m, speed=1.87m/s)\n4. **pedestrian** (zone=front-right, dist=15.63m, speed=1.09m/s)\n5. **bicycle** (zone=rear-right, dist=15.74m, speed=stationary)\n6. **pedestrian** (zone=front-right, dist=18.57m, speed=1.15m/s)\n7. **pedestrian** (zone=right, dist=18.72m, speed=1.20m/s)\n8. **pedestrian** (zone=front-right, dist=19.65m, speed=1.32m/s)\n9. **pedestrian** (zone=front-right, dist=22.31m, speed=1.11m/s)\n10. **pedestrian** (zone=front-right, dist=22.7m, speed=1.25m/s)\n11. **pedestrian** (zone=front-right, dist=22.74m, speed=1.10m/s)\n12. **pedestrian** (zone=front-right, dist=24.03m, speed=1.19m/s)\n13. **pedestrian** (zone=front-right, dist=25.42m, speed=1.33m/s)\n14. **pedestrian** (zone=front-right, dist=25.48m, speed=1.18m/s)\n15. **pedestrian** (zone=front-right, dist=25.63m, speed=1.53m/s)\n16. **car** (zone=right, dist=25.96m, speed=stationary)\n17. **car** (zone=front-left, dist=26.47m, speed=stationary)\n18. **pedestrian** (zone=front-right, dist=26.89m, speed=1.33m/s)\n19. **pedestrian** (zone=directly ahead, dist=27.13m, speed=1.25m/s)\n20. **pedestrian** (zone=front-right, dist=27.86m, speed=1.41m/s)\n21. **pedestrian** (zone=front-right, dist=29.02m, speed=1.25m/s)\n22. **car** (zone=directly ahead, dist=29.88m, speed=stationary)\n23. **car** (zone=direct",
+    "gt_verifiable": false,
+    "gt_value": null,
+    "gt_field": null
+  },
+  {
+    "scene": "scene-1094",
+    "condition": "D",
+    "question_type": "physics",
+    "question": "Given the ego vehicle speed stated in the scene description and the current stopping distance, can the ego vehicle safely stop before reaching the nearest object ahead? Show your calculation and state whether emergency braking is required.",
+    "reasoning": "",
+    "answer": "\u0435\u0439\u0447\u0430\u0441 \u044f \u0434\u043e\u043b\u0436\u0435\u043d \u0440\u0430\u0441\u0441\u0447\u0438\u0442\u0430\u0442\u044c, \u0441\u043c\u043e\u0436\u0435\u0442 \u043b\u0438 \u044d\u0433\u043e-\u0430\u0432\u0442\u043e\u043c\u043e\u0431\u0438\u043b\u044c \u0431\u0435\u0437\u043e\u043f\u0430\u0441\u043d\u043e \u043e\u0441\u0442\u0430\u043d\u043e\u0432\u0438\u0442\u044c\u0441\u044f \u0434\u043e \u0434\u043e\u0441\u0442\u0438\u0436\u0435\u043d\u0438\u044f \u0431\u043b\u0438\u0436\u0430\u0439\u0448\u0435\u0433\u043e \u043e\u0431\u044a\u0435\u043a\u0442\u0430 \u0432\u043f\u0435\u0440\u0451\u0434. \u0414\u0430\u0432\u0430\u0439\u0442\u0435 \u043d\u0430\u0447\u043d\u0451\u043c \u0441 \u0434\u0430\u043d\u043d\u044b\u0445, \u043f\u0440\u0435\u0434\u043e\u0441\u0442\u0430\u0432\u043b\u0435\u043d\u043d\u044b\u0445 \u0432 \u0437\u0430\u0434\u0430\u043d\u0438\u0438.\n\n\u0421\u043e\u0433\u043b\u0430\u0441\u043d\u043e \u043f\u0440\u0435\u0434\u043e\u0441\u0442\u0430\u0432\u043b\u0435\u043d\u043d\u043e\u0439 \u0438\u043d\u0444\u043e\u0440\u043c\u0430\u0446\u0438\u0438, \u0441\u043a\u043e\u0440\u043e\u0441\u0442\u044c \u044d\u0433\u043e-\u0430\u0432\u0442\u043e\u043c\u043e\u0431\u0438\u043b\u044f \u0441\u043e\u0441\u0442\u0430\u0432\u043b\u044f\u0435\u0442 0.1 \u043c/\u0441 (0.5 \u043a\u043c/\u0447), \u0430 \u0440\u0430\u0441\u0441\u0442\u043e\u044f\u043d\u0438\u0435 \u0434\u043e \u0431\u043b\u0438\u0436\u0430\u0439\u0448\u0435\u0433\u043e \u043e\u0431\u044a\u0435\u043a\u0442\u0430 \u2014 9.06 \u043c\u0435\u0442\u0440\u043e\u0432. \u0417\u0430\u0432\u0438\u0441\u0438\u043c\u043e\u0441\u0442\u044c \u0432\u0440\u0435\u043c\u0435\u043d\u0438 \u0440\u0435\u0430\u043a\u0446\u0438\u0438 \u043e\u0442 \u0441\u043a\u043e\u0440\u043e\u0441\u0442\u0438 \u043f\u043e\u043a\u0430\u0437\u044b\u0432\u0430\u0435\u0442, \u0447\u0442\u043e \u043f\u0440\u0438 \u0442\u0435\u043a\u0443\u0449\u0435\u0439 \u0441\u043a\u043e\u0440\u043e\u0441\u0442\u0438 \u043e\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0430 \u0437\u0430\u0439\u043c\u0435\u0442 \u043e\u043a\u043e\u043b\u043e 0 \u043c\u0435\u0442\u0440\u043e\u0432 (\u0437\u043d\u0430\u0447\u0435\u043d\u0438\u0435 \u0432 \u0441\u0435\u043a\u0443\u043d\u0434\u0430\u0445 \u043d\u0435 \u043f\u0440\u0435\u0432\u044b\u0448\u0430\u0435\u0442 0,01). \u042d\u0442\u043e \u043e\u0437\u043d\u0430\u0447\u0430\u0435\u0442, \u0447\u0442\u043e \u044d\u0433\u043e-\u0430\u0432\u0442\u043e\u043c\u043e\u0431\u0438\u043b\u044c \u0443\u0436\u0435 \u043d\u0430\u0445\u043e\u0434\u0438\u0442\u0441\u044f \u0432 \u0441\u043e\u0441\u0442\u043e\u044f\u043d\u0438\u0438 \u043e\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0438 \u0438 \u043d\u0435 \u0438\u043c\u0435\u0435\u0442 \u0432\u0440\u0435\u043c\u0435\u043d\u0438 \u043d\u0430 \u0440\u0435\u0430\u043a\u0446\u0438\u044e. \u0412\u0430\u0436\u043d\u043e \u043e\u0442\u043c\u0435\u0442\u0438\u0442\u044c, \u0447\u0442\u043e \u0434\u0430\u0436\u0435 \u043f\u0440\u0438 \u0441\u043a\u043e\u0440\u043e\u0441\u0442\u0438 0.1 \u043c/\u0441 \u043e\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0430 \u0437\u0430\u0439\u043c\u0435\u0442 \u043e\u0447\u0435\u043d\u044c \u043c\u0430\u043b\u043e \u0432\u0440\u0435\u043c\u0435\u043d\u0438, \u0438 \u0440\u0430\u0441\u0441\u0442\u043e\u044f\u043d\u0438\u0435 \u0434\u043e \u0431\u043b\u0438\u0436\u0430\u0439\u0448\u0435\u0433\u043e \u043e\u0431\u044a\u0435\u043a\u0442\u0430 \u043d\u0435 \u044f\u0432\u043b\u044f\u0435\u0442\u0441\u044f \u043f\u0440\u0435\u043f\u044f\u0442\u0441\u0442\u0432\u0438\u0435\u043c \u0434\u043b\u044f \u0431\u0435\u0437\u043e\u043f\u0430\u0441\u043d\u043e\u0439 \u043e\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0438. \u042d\u043a\u0441\u0442\u0440\u0435\u043d\u043d\u044b\u0435 \u043c\u0435\u0440\u044b \u043d\u0435 \u0442\u0440\u0435\u0431\u0443\u044e\u0442\u0441\u044f, \u0442\u0430\u043a \u043a\u0430\u043a \u0442\u0435\u043a\u0443\u0449\u0430\u044f \u0441\u043a\u043e\u0440\u043e\u0441\u0442\u044c \u043f\u043e\u0437\u0432\u043e\u043b\u044f\u0435\u0442 \u0431\u0435\u0437\u043e\u043f\u0430\u0441\u043d\u043e \u043e\u0441\u0442\u0430\u043d\u043e\u0432\u0438\u0442\u044c\u0441\u044f. \u0422\u0430\u043a\u0438\u043c \u043e\u0431\u0440\u0430\u0437\u043e\u043c, \u043e\u0442\u0432\u0435\u0442 \u0431\u0443\u0434\u0435\u0442: \u0434\u0430, \u044d\u0433\u043e-\u0430\u0432\u0442\u043e\u043c\u043e\u0431\u0438\u043b\u044c \u043c\u043e\u0436\u0435\u0442 \u0431\u0435\u0437\u043e\u043f\u0430\u0441\u043d\u043e \u043e\u0441\u0442\u0430\u043d\u043e\u0432\u0438\u0442\u044c\u0441\u044f \u0434\u043e \u0434\u043e\u0441\u0442\u0438\u0436\u0435\u043d\u0438\u044f \u0431\u043b\u0438\u0436\u0430\u0439\u0448\u0435\u0433\u043e \u043e\u0431\u044a\u0435\u043a\u0442\u0430, \u0438 \u044d\u043a\u0441\u0442\u0440\u0435\u043d\u043d\u044b\u0435 \u043c\u0435\u0440\u044b \u043d\u0435 \u043d\u0443\u0436\u043d\u044b.\n</think>\n\n<answer>\nYes, the ego-vehicle can safely stop before reaching the nearest object ahead. At 0.1 m/s, the stopping distance is negligible (~0.0 m), and the 9.06-meter distance to the nearest object is well within the stopping capability of the vehicle. Emergency braking is not required.\n</answer>",
+    "gt_verifiable": true,
+    "gt_value": 9.06,
+    "gt_field": "nearest_ahead_m",
+    "gt_object_class": "car"
+  },
+  {
+    "scene": "scene-1094",
+    "condition": "D",
+    "question_type": "zone",
+    "question": "Provide a complete inventory of all objects in the front-left and front-right zones. For each object, state class, distance, speed, and visibility. Which zone presents greater risk and why?",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nFront-Right Zone Inventory:\n1. **Car (closest)**: Distance=3.11m, Speed=4.13m/s (radar-confirmed), Visibility=Fully_visible, Radar RCS=-3.0dBsm, TTC\u224822.2s.\n2. **Car (farthest)**: Distance=9.06m, Speed=0.63m/s (radar-confirmed), Visibility=Fully_visible, Radar RCS=-3.0dBsm, TTC\u224811.8s.\n\nFront-Left Zone Inventory:\n1. **Pedestrian**: Distance=12.22m, Speed=1.63m/s (gt-estimated), Visibility=Fully_visible, TTC\u22486.9s.\n\nRisk Assessment:\n- **Front-Right Zone presents greater risk** due to proximity and speed disparity. The closer car at 3.11m with high velocity (TC\u224822.2s) poses a significant threat, while the farther car at 9.06m moves slowly (TC\u224811.8s). Occlusions (mostly_occluded) compound uncertainty.\n- **Front-Left Zone is riskier** despite lower TTC (\u22486.9s), owing to the pedestrian at 12.22m being farther away, reduced TTC, and occlusions (",
+    "gt_verifiable": false,
+    "gt_value": null,
+    "gt_field": null
+  },
+  {
+    "scene": "scene-1094",
+    "condition": "D",
+    "question_type": "radar",
+    "question": "The scene description includes radar Doppler velocity data for some objects. Which objects have radar-confirmed velocity readings? For each, state whether the radar reading agrees with the GT velocity estimate, and what the Doppler data tells us that cameras alone could not reveal.",
+    "reasoning": "",
+    "answer": "\u0435\u0439\u0447\u0430\u0441 \uc77d\ub294 \uc911\uc785\ub2c8\ub2e4...",
+    "gt_verifiable": false,
+    "gt_value": null,
+    "gt_field": null
+  }
+]

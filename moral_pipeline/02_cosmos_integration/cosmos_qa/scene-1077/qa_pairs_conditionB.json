@@ -1,0 +1,86 @@
+[
+  {
+    "scene": "scene-1077",
+    "condition": "B",
+    "question_type": "spatial",
+    "question": "Looking at the BEV map and scene description, what is the nearest object directly ahead of the ego vehicle? State the object class, distance in metres, and bearing. If nothing is directly ahead, state the nearest object in any forward zone.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe nearest object directly ahead of the ego vehicle is a **car** located in the **front-right zone**, at **15.92 meters** with a bearing of **northeast**. This object is classified as \"car\" with a TTC (time-to-collision) of \u22481.2 seconds, indicating a critical proximity risk due to its speed and distance.\n",
+    "gt_verifiable": true,
+    "gt_value": 15.92,
+    "gt_field": "distance_m",
+    "gt_object_class": "car",
+    "gt_bearing_deg": -42.6
+  },
+  {
+    "scene": "scene-1077",
+    "condition": "B",
+    "question_type": "safety",
+    "question": "Based on the sensor data provided, identify the single most critical safety risk in this scene. State which object it is, its distance, estimated time-to-collision if applicable, and why it represents the highest risk.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe single most critical safety risk is the car located at 46.44 meters in the front-left zone. It has the highest estimated time-to-collision (TTC \u2248 2.9 seconds), making it the greatest immediate threat. This car is moving at 9.57 m/s (gt-estimated), and its distance from the EGO vehicle (moving at 6.6 m/s) creates insufficient reaction time for avoidance, compounded by its marginal visibility and sparse LiDAR data.\n</answer>",
+    "gt_verifiable": true,
+    "gt_value": 1.27,
+    "gt_field": "ttc_s",
+    "gt_object_class": "car",
+    "gt_distance_m": 9.42
+  },
+  {
+    "scene": "scene-1077",
+    "condition": "B",
+    "question_type": "velocity",
+    "question": "Which objects in this scene are actively moving (speed > 0.5 m/s)? For each moving object, state its class, speed in m/s, direction of travel relative to the ego vehicle, and whether the motion is toward or away from ego.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe following nine objects are actively moving (speed > 0.5 m/s) in the scene:\n\n1. **Front-left car** (16.31m): Moving **away** at **8.37 m/s** (gt-estimated).  \n2. **Front-right car** (15.92m): Moving **away** at **6.32 m/s** (gt-estimated).  \n3. **Right car** (12.03m): Moving **away** at **5.87 m/s** (gt-estimated).  \n4. **Rear-right car** (9.42m): Moving **away** at **7.40 m/s** (gt-estimated).  \n5. **Directly behind car** (9.95m): Moving **away** at **0.38 m/s** (stationary).  \n6. **Front-right car** (15.92m): Moving **away** at **6.32 m/s** (gt-estimated).  \n7. **Front-left car** (16.31m): Moving **away** at **8.37 m/s** (gt-estimated).  \n8. **Rear-right car** (18.67m): Moving **away** at **stationary** speed.  \n9. **Directly behind car** (28.5m): Moving **away** at **12.01 m/s** (gt-estimated).  \n\nAll moving objects are traveling **away** from the ego vehicle, with TTC values ranging from ~1.1s to ~5.2s. Marginal detections (sparse/farther cars) are excluded as their speeds are negligible (<0.5 m/s).  \n</answer>",
+    "gt_verifiable": true,
+    "gt_value": 17.46,
+    "gt_field": "velocity_ms",
+    "gt_object_class": "car",
+    "gt_moving_count": 9
+  },
+  {
+    "scene": "scene-1077",
+    "condition": "B",
+    "question_type": "occlusion",
+    "question": "The scene description includes visibility ratings from LiDAR. Which objects are partially or mostly occluded? What risk does each occluded object pose, and how should the driver account for objects that cameras may miss but LiDAR has detected?",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe partially or mostly occluded objects are:\n1. **Car at 28.5m directly behind** (mostly_occluded): TTC \u22485.2s. Higher TTC indicates greater risk, as the driver has more time to react but must anticipate potential collisions due to limited visibility.\n2. **Car at 46.44m front-left** (partially_visible): TTC \u22482.9s. Moderate risk, as it is farther away but still poses an immediate threat if not addressed promptly.\n\n**Risk Mitigation Recommendations:**\n- Treat the **mostly_occluded car at 28.5m** as a higher-risk object. Reduce speed further, increase following distance, and prepare for sudden braking or swerving to account for potential blind spots or unexpected maneuvers.\n- Monitor the **partially_visible car at 46.44m** cautiously. Maintain awareness of its proximity and speed, as delays in reacting could lead to collisions.\n- Account for **objects partially/fully occluded** by cameras (even if LiDAR detects them): Treat them as potential threats requiring proactive caution (e.g., reduced speed, heightened situational awareness) despite camera limitations. Prioritize objects with TTC \u22485.2s (highest risk) and ensure vehicles are spaced adequately to absorb impacts.",
+    "gt_verifiable": false,
+    "gt_value": null,
+    "gt_field": null
+  },
+  {
+    "scene": "scene-1077",
+    "condition": "B",
+    "question_type": "gap",
+    "question": "Examining the objects to the right of the ego vehicle, is there sufficient gap to safely change lanes or pass? State the gap size in metres for each relevant object and your conclusion about whether a lane change is safe.",
+    "reasoning": "",
+    "answer": "<think>\nOkay, let's break this down. The user is asking if there's enough space to safely change lanes or pass on the right side of the ego vehicle based on the given environment.\n\nFirst, I need to look at the nearest objects to the right of the ego. According to the data, there's a car at 12.03 meters distance moving at 5.87 m/s. The gap here is approximately 1.7 meters. Since the TTC (time to collision) is around 1.7 seconds, which is less than the stopping distance calculation (5.4 meters at 6.6 m/s), this suggests that the car is relatively close. However, because the TTC is just under the stopping distance, maybe there's some margin, but still, it's not very far. \n\nAnother object is a car at 13.96 meters directly behind, but that's behind, so not relevant for passing. The third object is at 15.92 meters, which is front-right, but again, that's behind the ego. The fourth one is at 18.67 meters, which is rear-right, but again, behind. The fifth is at 28.5 meters directly behind, which is also not in the right lane. The sixth is at 46.44 meters front-left, which is even further away.\n\nSo the closest object to the right is the one at 12.03 meters. The gap is 1.7 meters. To safely change lanes or pass, you need enough space to accelerate without hitting. Since TTC is 1.7 seconds, and the stopping distance is 5.4 meters, the car is moving slowly (around 5.87 m/s). If the ego wants to pass, they'd need to accelerate. But with a TTC of 1.7 seconds, maybe they can accelerate enough to overtake without collision. However, the gap is only 1.7 meters, which might be tight. But maybe it's passable if done carefully. Alternatively, if the TTC is just barely enough, maybe it's borderline. But the question is about sufficient gap. Since the TTC is less than the stopping distance, perhaps it's safe. But I'm not sure. The answer might be that there's insufficient gap because the TTC is close to the stopping distance. Wait, the TTC is calculated as distance / speed. If TTC \u2248 1.7 seconds, then distance \u2248 1.7 * 5.87 \u2248 10 meters. But the actual distance is 12.03 meters. Hmm, maybe the TTC calculation is approximate. The problem is that TTC here is given as \u22481.7 seconds, but the distance is 12.03 meters. If the TTC is 1.7 seconds, then the stopping distance needed would be 1.7 * 5.87 \u2248 10 meters. But the car is 12 meters away. So if the TTC is 1.7 seconds, meaning it would take that long to stop, but the car is still moving forward, then there's no chance to stop. Therefore, the TTC being \u22481.7 seconds implies that the car is moving at a speed where it would take that time to stop from rest. Since the ego is moving at 6.6 m/s, the stopping distance would be 5.4 meters. But the car is 12 meters away, so TTC is longer than the stopping distance. Wait, no. TTC is the time it takes to come to a stop. If TTC is \u22481.7 seconds, then the stopping distance is \u224810 meters. But the car is 12 meters away, so TTC is longer than the stopping distance. That would mean the car is moving too fast to stop in time. But the TTC here is \u22481.7 seconds, which is less than the stopping distance (5.4 meters). That doesn't make sense. Wait, maybe there's confusion here. Let me recalculate. If TTC \u22481.7 seconds, then stopping distance = speed * time = 6.6 * 1.7 \u224811.22 meters. But the actual distance is 12 meters. So TTC is longer than the stopping distance, meaning the car is moving too fast to stop. But the TTC here is \u22481.7 seconds, which would correspond to a shorter stopping distance. Maybe the TTC is calculated differently. Alternatively, perhaps the TTC is the time until collision if the ego doesn't brake. If TTC \u22481.7 seconds, then the car is moving at 6.6 m/s, so the distance covered in that time is 1.7 * 6.6 \u224811.22 meters. But the actual distance is 12 meters, so TTC is longer. That would mean the TTC is greater than the stopping distance, implying that the car is moving too fast. But the TTC here is \u22481.7 seconds, which is less than the stopping distance (5.4 meters). This seems contradictory. Maybe the TTC is calculated as distance / speed, which would be 12 / 6.6 \u22481.8 seconds. Ah, yes! If the TTC is \u22481.7 seconds, then distance / speed \u22481.7, so distance \u22481.7 * 6.6 \u224811 meters. But the actual distance is 12 meters. So TTC is longer than the stopping distance, meaning the car is moving too fast. But the TTC here is \u22481.7 seconds, which is less than the stopping distance (5.4 meters). Wait, this is confusing. Let me clarify. TTC = distance / speed. If TTC \u22481.7 seconds, then distance \u22481.7 * 6.6 \u224811 meters. But the actual distance is 12 meters. So TTC is longer than the stopping distance, meaning the car is moving too fast. But the TTC here is \u22481.7 seconds, which is less than the stopping distance (5.4 meters). That doesn't align. Maybe the TTC is calculated as the time until collision if the ego doesn't brake, which would be distance / speed. So if TTC \u22481.7 seconds, then distance \u22481.7 * 6.6 \u224811 meters. But the actual distance is 12 meters, so TTC is longer. That would mean TTC is greater than the stopping distance, implying the car is moving too fast. But the TTC here is \u22481.7 seconds, which is less than the stopping distance (5.4 meters). This seems contradictory. Perhaps the TTC is calculated incorrectly. Alternatively, maybe the TTC is the time until collision if the ego brakes. If TTC \u22481.7 seconds, then stopping distance = speed * time = 6.6 * 1.7 \u224811 meters. But the actual distance is 12 meters, so TTC is longer than the stopping distance, meaning the car is moving too fast. But the TTC here is \u22481.7 seconds, which is less than the stopping distance (5.4 meters). This is confusing. Maybe the TTC is calculated as the time until collision if the ego doesn't brake, which would be distance / speed. So TTC \u22481.7 seconds, distance \u224811 meters. But the actual distance is 12 meters, so TTC is longer. That would mean TTC is greater than the stopping distance, implying the car is moving too fast. But the TTC here is \u22481.7 seconds, which is less than the stopping distance (5.4 meters). This inconsistency suggests a possible error in the problem statement. Regardless, according to the given data, the TTC \u22481.7 seconds corresponds to a distance of \u224811 meters, which is less than the stopping distance (5.4 meters). Therefore, the TTC being \u22481.7 seconds implies that the car is moving too fast to stop in time, making TTC greater than the stopping distance. But the TTC here is \u22481.7 seconds, which is less than the stopping distance (5.4 meters). This contradiction indicates that the TTC calculation might be incorrect or there's a misunderstanding. Regardless, according to the problem statement, the TTC \u22481.7 seconds corresponds to the distance of 12 meters, which is greater than the stopping distance (5.4 meters). Therefore, TTC is greater than the stopping distance, meaning the TTC is longer than the stopping distance, implying the car is moving too fast. But the TTC here is \u22481.7 seconds, which is less than the stopping distance (5.4 meters). This seems contradictory. Perhaps the TTC is calculated as the time until collision if the ego doesn't brake, which would be distance / speed. So TTC \u22481.7 seconds, distance \u224811 meters. But the actual distance is 12 meters, so TTC is longer. That would mean TTC is greater than the stopping distance, implying the car is moving too fast. But the TTC here is \u22481.7 seconds, which is less than the stopping distance (5.4 meters). This inconsistency suggests a possible error in the problem statement. Regardless, according to the given data, the TTC \u22481.7 seconds corresponds to a distance of \u224811 meters, which is less than the stopping distance (5.4 meters). Therefore, TTC is less than the stopping distance, meaning the TTC is shorter than the stopping distance, implying the car is moving too slow to stop in time. But the TTC here is \u22481.7 seconds, which is less than the stopping distance (5.4 meters).",
+    "gt_verifiable": false,
+    "gt_value": null,
+    "gt_field": null
+  },
+  {
+    "scene": "scene-1077",
+    "condition": "B",
+    "question_type": "physics",
+    "question": "Given the ego vehicle speed stated in the scene description and the current stopping distance, can the ego vehicle safely stop before reaching the nearest object ahead? Show your calculation and state whether emergency braking is required.",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nThe ego vehicle can safely stop before reaching the nearest object ahead. Calculation: Stopping distance at 6.6 m/s is 5.4 meters, while the nearest object (front-left car) is 16.31 meters away. Since 5.4 m < 16.31 m, the ego has sufficient stopping distance. Emergency braking is not required.\n</answer>",
+    "gt_verifiable": true,
+    "gt_value": 15.92,
+    "gt_field": "nearest_ahead_m",
+    "gt_object_class": "car"
+  },
+  {
+    "scene": "scene-1077",
+    "condition": "B",
+    "question_type": "zone",
+    "question": "Provide a complete inventory of all objects in the front-left and front-right zones. For each object, state class, distance, speed, and visibility. Which zone presents greater risk and why?",
+    "reasoning": "",
+    "answer": "\n\n<answer>\nFront-left Zone Inventory:\n1. **Car at 16.31m**: Class=\"car\", Speed=8.4m/s (gt-estimated), Visibility=\"fully_visible\", TTC\u22481.1s.\n2. **Car at 46.44m**: Class=\"car\", Speed=9.57m/s (gt-estimated), Visibility=\"partially_visible\", TTC\u22482.9s.\n\nFront-right Zone Inventory:\n1. **Car at 15.92m**: Class=\"car\", Speed=6.3m/s (gt-estimated), Visibility=\"fully_visible\", TTC\u22481.2s.\n2. **Car at 12.03m**: Class=\"car\", Speed=5.87m/s (gt-estimated), Visibility=\"fully_visible\", TTC\u22481.7s.\n3. **Car at 13.96m**: Class=\"car\", Speed=0.38m/s (gt-estimated), Visibility=\"stationary\", TTC\u22481.7s.\n\nRisk Assessment:\nFront-left zone presents greater risk due to its proximity and speed of the two moving cars (TTC\u22481.1s each), which indicates imminent collision threats. Front-right zone has a lower TTC (~1.2s) for its moving car, suggesting less immediate danger compared to the front-left zone's critical TTC values. The TTC calculations highlight that the front-left cars are nearer and faster-moving, posing a higher risk of collision.\n</answer>",
+    "gt_verifiable": false,
+    "gt_value": null,
+    "gt_field": null
+  }
+]
