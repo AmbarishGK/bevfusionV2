@@ -80,9 +80,9 @@ CLEAN_SCENES = [
 ]
 
 CONDITION_DIRS = {
-    "A": "00_camera_only",
-    "B": "01_gt_annotations",
-    "D": "02_gt_with_radar",
+    "A": "condition_A_camera_only",
+    "B": "condition_B_lidar_bev",
+    "D": "condition_D_lidar_bev_radar",
 }
 
 # Camera images — CAM_FRONT only for 4090 (8192 context).
@@ -192,8 +192,8 @@ FORMAT_INSTRUCTION = ""  # Format is fully specified in system prompt
 # Local 4090 (8192 context):
 #   Change max_tokens to 3500 AND CAMERA_FILENAMES to ["CAM_FRONT.jpg"] only
 COSMOS_PARAMS = {
-    "model":             "nvidia/Cosmos-Reason2-8B",  # 8B: stable, no language bleed
-    "max_tokens":        3500,   # 4090 (8192 ctx): input ~4097t → 3500 output fits safely
+    "model":             "/home/shadeform/models/Cosmos-Reason2-8B",  # 8B: stable, no language bleed
+    "max_tokens":        6000,   # A100 (16384 ctx): input ~3500t → 6000 output fits safely
                                  # Cloud L40S (16384 ctx): change to 6000
     "temperature":       0.6,
     "top_p":             0.95,
@@ -215,15 +215,19 @@ COSMOS_PARAMS = {
 QUESTION_TEMPLATES = {
     "spatial": (
         "Look at the BEV map and front camera image, then answer: "
-        "What is the closest object directly in the vehicle's path?\n"
+        "What is the closest object directly in the vehicle's forward path?\n"
         "In your reasoning:\n"
-        "1. [BEV] Describe what you see directly ahead of the ego vehicle in the BEV map — "
-        "what objects are in the forward zone, how close do they appear, what shape/colour?\n"
+        "1. [BEV] Look at the TOP half of the BEV map (forward direction). "
+        "Describe only objects ABOVE the ego vehicle centre — these are ahead of the vehicle. "
+        "Objects BELOW the ego centre are behind and must NOT be reported as forward objects.\n"
         "2. [CAM] Describe what you can see ahead in the front camera — is there an object "
         "visible on the road, in a lane, on the pavement?\n"
         "3. [GT] From GROUND TRUTH DATA, find the object with the smallest distance_m where "
-        "bearing_deg is between -22.5 and +22.5 (directly ahead; positive=left, negative=right "
-        "in nuScenes ego frame). If none, use nearest with bearing between -90 and +90. "
+        "bearing_deg is strictly between -22.5 and +22.5 (directly ahead). "
+        "CRITICAL: bearing near -180 or +180 = DIRECTLY BEHIND, do NOT report. "
+        "bearing near -90 or +90 = SIDE, do NOT report as forward. "
+        "If NO object has bearing between -22.5 and +22.5, state 'No object directly ahead' "
+        "and report the nearest with bearing between -90 and +90 instead. "
         "State its exact class, distance_m, and bearing_deg.\n"
         "4. [DECISION] Is this object a hazard? Should the vehicle slow, stop, or maintain speed?"
     ),
@@ -417,6 +421,103 @@ QUESTION_TEMPLATES = {
         "Then state the minimum action that prevents the worst outcome and "
         "quantify it: e.g. braking at 4 m/s^2 gives X extra metres."
     ),
+
+    "trajectory": (
+        "Look at the BEV map and front camera image, then answer: "
+        "Where will each moving object be in 3 seconds, and does any enter the ego vehicle path?\n"
+        "In your reasoning:\n"
+        "1. [BEV] Identify every object with a velocity arrow (blue GT arrow or cyan Doppler). "
+        "Describe the arrow direction and approximate length (long=fast, short=slow).\n"
+        "2. [CAM] Which moving objects from the BEV are visible in the front camera? "
+        "Do they appear to be moving toward or across the ego path?\n"
+        "3. [GT] For every object with velocity_ms > 0.5, project its position at t=3s:\n"
+        "   new_x = x + vx * 3.0\n"
+        "   new_y = y + vy * 3.0\n"
+        "   new_dist = sqrt(new_x^2 + new_y^2)\n"
+        "   new_bearing = degrees(atan2(new_x, new_y))\n"
+        "   Show all calculations. Flag if new_bearing is between -22.5 and +22.5.\n"
+        "4. [DECISION] Will any object enter the ego forward path within 3 seconds? "
+        "If yes, name it, state its projected position, and specify the required action."
+    ),
+
+    "near_miss": (
+        "Look at the BEV map and front camera image, then answer: "
+        "Is any object within 2 seconds of a near-miss or collision event right now?\n"
+        "In your reasoning:\n"
+        "1. [BEV] Scan for objects dangerously close to ego or whose velocity arrows "
+        "point directly toward ego. Cyan Doppler arrows pointing at ego are critical.\n"
+        "2. [CAM] Is there anything in the front camera about to cut in, "
+        "stop suddenly, or enter the lane?\n"
+        "3. [GT] Apply BOTH near-miss criteria to every object within 25m:\n"
+        "   Criterion A — TTC < 2.0s:\n"
+        "     Ahead (bearing -45 to +45): TTC = distance_m / (ego_speed + velocity_ms)\n"
+        "     Behind (|bearing| > 135): TTC = distance_m / max(velocity_ms - ego_speed, 0.1)\n"
+        "   Criterion B — lateral gap < 0.5m:\n"
+        "     gap = distance_m * sin(|bearing_deg|) - width_m/2 - 1.0\n"
+        "   Show every calculation. Flag any object meeting either criterion.\n"
+        "4. [DECISION] Is a near-miss imminent? Name every flagged object, "
+        "state which criterion it fails, and specify the exact evasive action required."
+    ),
+
+    "multi_conflict": (
+        "Look at the BEV map and front camera image, then answer: "
+        "If multiple objects pose simultaneous risks, rank them by priority and justify.\n"
+        "In your reasoning:\n"
+        "1. [BEV] Identify ALL threatening objects — moving, close, or in forward path. "
+        "Do not focus on just one.\n"
+        "2. [CAM] Confirm which threats are visible in the front camera and whether "
+        "any additional context changes their priority.\n"
+        "3. [GT] For every object within 30m compute a risk score:\n"
+        "   TTC = distance_m / max(ego_speed + velocity_ms, 0.1)\n"
+        "   risk_score = (1/TTC) * (1/distance_m) * (1 if bearing in -45:+45 else 0.5)\n"
+        "   Rank all objects by risk_score descending. Show all calculations.\n"
+        "4. [DECISION] State the top 2-3 conflicting risks in ranked order. "
+        "For each: name, distance, TTC, risk_score. Specify whether they require "
+        "the SAME or CONFLICTING actions. State the final resolved action."
+    ),
+
+    "sensor_limit": (
+        "Look at the BEV map and front camera image, then answer: "
+        "What safety-critical information is MISSING from the current sensor setup, "
+        "and how does that uncertainty affect your driving decision?\n"
+        "In your reasoning:\n"
+        "1. [BEV] What does the BEV show clearly? What is uncertain — "
+        "are velocity arrows cyan Doppler (measured) or blue GT-estimated? "
+        "Are there gaps in LiDAR coverage?\n"
+        "2. [CAM] What does the front camera add that BEV cannot — "
+        "signals, road markings, pedestrian intent? What does it miss?\n"
+        "3. [GT] Identify the 2-3 most safety-critical unknowns:\n"
+        "   Condition A (camera only): no distances or velocities — state which objects "
+        "have unknown TTC\n"
+        "   Condition B (LiDAR BEV): velocities are gt-estimated — state uncertainty "
+        "range and which objects it affects most\n"
+        "   Condition D (LiDAR+radar): state which objects have radar-confirmed velocity "
+        "vs gt-estimated and the confidence difference\n"
+        "4. [DECISION] What is the most conservative safe action given sensor limitations? "
+        "How would the decision change if the missing data were available?"
+    ),
+
+    "ethical": (
+        "Look at the BEV map and front camera image, then answer: "
+        "The ego vehicle faces a physical dilemma where any action risks harm to "
+        "at least one party. Identify the dilemma and justify the least-harm action.\n"
+        "In your reasoning:\n"
+        "1. [BEV] Identify competing risks — braking risks rear collision from a "
+        "following vehicle while maintaining speed risks front collision, or swerving "
+        "avoids one object but endangers another. Describe the conflict in the BEV.\n"
+        "2. [CAM] Does the front camera reveal vulnerable road users "
+        "(pedestrians, cyclists, motorcyclists) whose safety should be weighted more heavily? "
+        "Any crosswalk or school zone context?\n"
+        "3. [GT] Quantify both sides of the dilemma explicitly:\n"
+        "   Option A: [action] — protects [party] but risks [party] at Xm, TTC Ys, "
+        "severity [low=property/medium=injury/high=fatality]\n"
+        "   Option B: [action] — protects [party] but risks [party] at Xm, TTC Ys, "
+        "severity [low/medium/high]\n"
+        "4. [DECISION] State the least-harm action and the ethical principle justifying it "
+        "(prioritise vulnerable road users / minimise total harm / protect occupants). "
+        "Acknowledge the tradeoff — do not pretend the dilemma has a perfect solution."
+    ),
+
 }
 
 
@@ -798,6 +899,125 @@ def extract_gt_fields(detections: list[dict], question_type: str) -> dict:
                 "gt_field":      "t_impact_s",
                 "gt_outcome":    "SAFE_PASSAGE",
             }
+
+    elif question_type == "trajectory":
+        # GT: project moving objects 3s forward, flag any entering forward path
+        moving = [d for d in by_dist if d.get("velocity_ms", 0) > 0.5]
+        import math
+        enters_path = []
+        for d in moving:
+            new_x = d["x"] + d.get("vx", 0) * 3.0
+            new_y = d["y"] + d.get("vy", 0) * 3.0
+            new_bearing = math.degrees(math.atan2(new_x, new_y))
+            if abs(new_bearing) <= 22.5:
+                enters_path.append({
+                    "class": d["class"],
+                    "distance_m": d["distance_m"],
+                    "new_bearing": round(new_bearing, 1),
+                })
+        gt = {
+            "gt_verifiable":    True,
+            "gt_value":         len(enters_path),
+            "gt_field":         "objects_entering_path",
+            "gt_outcome":       "PATH_CONFLICT" if enters_path else "CLEAR",
+            "gt_entering_path": enters_path,
+        }
+
+    elif question_type == "near_miss":
+        # GT: any object with TTC < 2s or lateral gap < 0.5m
+        EGO_SPEED = 4.0
+        flagged = []
+        for d in by_dist:
+            if d["distance_m"] > 25:
+                continue
+            bearing = abs(d.get("bearing_deg", 90))
+            vel = d.get("velocity_ms", 0)
+            # TTC criterion
+            if bearing <= 45:
+                ttc = d["distance_m"] / max(EGO_SPEED + vel, 0.1)
+            elif bearing > 135:
+                ttc = d["distance_m"] / max(vel - EGO_SPEED, 0.1) if vel > EGO_SPEED else 999
+            else:
+                ttc = 999
+            # Gap criterion
+            import math
+            gap = d["distance_m"] * math.sin(math.radians(bearing)) - d.get("width_m", 1.0)/2 - 1.0
+            if ttc < 2.0 or gap < 0.5:
+                flagged.append({
+                    "class": d["class"],
+                    "distance_m": d["distance_m"],
+                    "ttc": round(ttc, 2),
+                    "gap": round(gap, 2),
+                    "criterion": "TTC" if ttc < 2.0 else "GAP",
+                })
+        gt = {
+            "gt_verifiable": True,
+            "gt_value":      len(flagged),
+            "gt_field":      "near_miss_count",
+            "gt_outcome":    "NEAR_MISS" if flagged else "SAFE",
+            "gt_flagged":    flagged,
+        }
+
+    elif question_type == "multi_conflict":
+        # GT: top 2 objects by risk score within 30m
+        import math
+        EGO_SPEED = 4.0
+        scored = []
+        for d in by_dist:
+            if d["distance_m"] > 30:
+                continue
+            bearing = abs(d.get("bearing_deg", 90))
+            vel = d.get("velocity_ms", 0)
+            ttc = d["distance_m"] / max(EGO_SPEED + vel, 0.1)
+            weight = 1.0 if bearing <= 45 else 0.5
+            risk = (1.0 / max(ttc, 0.1)) * (1.0 / max(d["distance_m"], 0.1)) * weight
+            scored.append({
+                "class": d["class"],
+                "distance_m": d["distance_m"],
+                "ttc": round(ttc, 2),
+                "risk_score": round(risk, 4),
+            })
+        scored.sort(key=lambda x: x["risk_score"], reverse=True)
+        gt = {
+            "gt_verifiable":  True,
+            "gt_value":       scored[0]["risk_score"] if scored else 0,
+            "gt_field":       "top_risk_score",
+            "gt_top_threats": scored[:3],
+        }
+
+    elif question_type == "sensor_limit":
+        # GT: count of gt-estimated vs radar-confirmed velocities
+        gt_estimated = [d for d in detections if d.get("velocity_ms", 0) > 0.5
+                        and d.get("num_radar_pts", 0) == 0]
+        radar_confirmed = [d for d in detections if d.get("velocity_ms", 0) > 0.5
+                           and d.get("num_radar_pts", 0) > 0]
+        gt = {
+            "gt_verifiable":        True,
+            "gt_value":             len(gt_estimated),
+            "gt_field":             "gt_estimated_count",
+            "gt_estimated_count":   len(gt_estimated),
+            "gt_radar_confirmed":   len(radar_confirmed),
+            "gt_uncertainty_level": "HIGH" if len(gt_estimated) > 2 else "MEDIUM" if len(gt_estimated) > 0 else "LOW",
+        }
+
+    elif question_type == "ethical":
+        # GT: identify the dilemma — brake risk (rear) vs maintain risk (front)
+        EGO_SPEED = 4.0
+        ahead = [d for d in by_dist if abs(d.get("bearing_deg", 90)) <= 45 and d["distance_m"] <= 30]
+        behind = [d for d in by_dist if abs(d.get("bearing_deg", 90)) > 135 and d["distance_m"] <= 25
+                  and d.get("velocity_ms", 0) > EGO_SPEED]
+        front_ttc = ahead[0]["distance_m"] / max(EGO_SPEED + ahead[0].get("velocity_ms",0), 0.1) if ahead else 999
+        rear_ttc  = behind[0]["distance_m"] / max(behind[0].get("velocity_ms",0) - EGO_SPEED, 0.1) if behind else 999
+        has_dilemma = front_ttc < 6.0 and rear_ttc < 6.0
+        gt = {
+            "gt_verifiable":  True,
+            "gt_value":       round(min(front_ttc, rear_ttc), 2),
+            "gt_field":       "min_dilemma_ttc_s",
+            "gt_has_dilemma": has_dilemma,
+            "gt_front_ttc":   round(front_ttc, 2) if front_ttc < 999 else None,
+            "gt_rear_ttc":    round(rear_ttc, 2) if rear_ttc < 999 else None,
+            "gt_outcome":     "DILEMMA" if has_dilemma else "NO_DILEMMA",
+        }
 
     return gt
 
@@ -1181,7 +1401,9 @@ def main():
     scenes_done = 0
     scenes_failed = 0
 
+    run_start_time = time.time()
     for scene_name in scenes:
+        scene_start_time = time.time()
         print(f"\n── {scene_name} ─────────────────────────────────────────")
 
         qa_pairs = generate_scene_qa(
@@ -1251,7 +1473,12 @@ def main():
                 concat_f.write(json.dumps(record, ensure_ascii=False) + "\n")
             concat_f.flush()  # flush after each scene — survive power loss
 
-        print(f"  Progress: {scenes_done}/{len(scenes)} scenes done")
+        scene_elapsed = time.time() - scene_start_time
+        total_elapsed = time.time() - run_start_time
+        avg_per_scene = total_elapsed / scenes_done
+        remaining_scenes = len(scenes) - scenes_done
+        eta_hours = (avg_per_scene * remaining_scenes) / 3600
+        print(f"  Progress: {scenes_done}/{len(scenes)} scenes | {scene_elapsed:.0f}s this scene | avg {avg_per_scene:.0f}s/scene | ETA ~{eta_hours:.1f}hr")
 
     concat_f.close()
 
