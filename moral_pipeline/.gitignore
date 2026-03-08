@@ -1,0 +1,11 @@
+outputs/
+saves/
+logs/
+02_cosmos_integration/hf_data/
+02_cosmos_integration/cosmos_qa/
+__pycache__/
+utils/__pycache__/
+*.pyc
+unsloth_compiled_cache/
+github.txt
+data/
