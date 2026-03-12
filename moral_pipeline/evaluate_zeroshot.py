@@ -605,7 +605,7 @@ def main():
                         'clean_lidar_only : lidar-only BEV (no camera)\n'
                         'clean_radar_only : lidar+radar BEV (no camera)'
                     ))
-    ap.add_argument('--condition',    default='B', choices=['B', 'D'],
+    ap.add_argument('--condition',    default='B', choices=['B', 'D', 'E'],
                     help='Sensor condition: B=LiDAR, D=LiDAR+Radar')
     ap.add_argument('--det_root',     default=None,
                     help='Root dir for detections.json files (auto-detected if None)')
