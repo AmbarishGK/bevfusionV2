@@ -1,0 +1,45 @@
+# MoRAL Pipeline — Python Dependencies
+# Install with: uv pip install -r requirements.txt
+# Or with pip: pip install -r requirements.txt
+
+# ── Core ML ──────────────────────────────────────────────
+torch>=2.2.0
+transformers>=4.45.0
+accelerate>=0.30.0
+
+# ── LoRA / QLoRA ─────────────────────────────────────────
+peft>=0.11.0
+trl>=0.9.0
+bitsandbytes>=0.43.0
+
+# ── Image processing ────────────────────────────────────
+Pillow>=10.0.0
+
+# ── Vision model utilities ──────────────────────────────
+qwen-vl-utils>=0.0.2
+
+# ── Evaluation metrics ──────────────────────────────────
+sacrebleu>=2.3.0
+nltk>=3.8.0
+
+# ── Visualization / scene_utils ─────────────────────────
+matplotlib>=3.7.0
+numpy>=1.24.0
+
+# ── nuScenes data processing ────────────────────────────
+pyquaternion>=0.9.9
+nuscenes-devkit>=1.1.11
+
+# ── HuggingFace Hub (model + data download) ─────────────
+huggingface_hub>=0.23.0
+hf_transfer>=0.1.6
+
+# ── Optional: FlashAttention-2 (H100/A100 recommended) ──
+# pip install flash-attn --no-build-isolation
+# flash-attn>=2.5.0
+
+# ── Optional: W&B logging ───────────────────────────────
+# wandb>=0.16.0
+
+# ── Optional: Unsloth (faster inference in evaluate) ────
+# pip install unsloth
