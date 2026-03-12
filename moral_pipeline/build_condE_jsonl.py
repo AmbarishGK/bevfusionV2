@@ -53,8 +53,8 @@ def format_detection_entry(d, idx):
     r_rcs = d.get('radar_rcs')
 
     lines.append(f"[Object {idx+1}] {cls.upper()}")
-    lines.append(f"  Position : {dist:.1f}m away, bearing {bearing:.1f}° from ego")
-    lines.append(f"  Size     : {w:.2f}m wide × {l:.2f}m long × {h:.2f}m tall")
+    lines.append(f"  Position : {dist:.1f}m away, bearing {bearing:.1f} deg from ego")
+    lines.append(f"  Size     : {w:.2f}m wide x {l:.2f}m long x {h:.2f}m tall")
     lines.append(f"  Velocity : {vel:.2f} m/s  (vx={vx:.2f}, vy={vy:.2f})")
     lines.append(f"  LiDAR pts: {n_lidar}  |  Radar pts: {n_radar}")
     lines.append(f"  Visibility: {vis}")
@@ -81,8 +81,8 @@ def format_detections_rich(dets, ego_speed=None):
         lines.append("No detections available.")
         return '\n'.join(lines)
 
-    # Sort by distance
-    dets_sorted = sorted(dets, key=lambda d: d.get('distance_m', 999))
+    # Sort by distance — keep only closest 5 to limit token count
+    dets_sorted = sorted(dets, key=lambda d: d.get('distance_m', 999))[:5]
 
     for idx, d in enumerate(dets_sorted):
         lines.append(format_detection_entry(d, idx))
@@ -109,15 +109,15 @@ TWO_STAGE_PREFIX = (
     "1. A Bird's Eye View (BEV) map showing raw LiDAR + Radar point clouds\n"
     "2. A front camera image (CAM_FRONT)\n"
     "3. Structured detection data from sensors\n\n"
-    "STEP 1 — Describe the BEV map:\n"
+    "STEP 1 - Describe the BEV map:\n"
     "Look at the BEV image carefully. Identify dense point cloud clusters "
     "(likely objects), sparse regions (open road), and any movement indicators "
     "(arrow overlays showing velocity). Note approximate positions and directions.\n\n"
-    "STEP 2 — Correlate with detections:\n"
+    "STEP 2 - Correlate with detections:\n"
     "Match each detection entry to what you see in the BEV. For example, "
-    "a car at 10.3m bearing -116.8° should appear as a dense cluster "
+    "a car at 10.3m bearing -116.8 deg should appear as a dense cluster "
     "in the rear-left quadrant of the BEV. Confirm or note discrepancies.\n\n"
-    "STEP 3 — Answer the question:\n"
+    "STEP 3 - Answer the question:\n"
     "Use both your visual understanding and the detection data to give "
     "a precise, grounded answer.\n\n"
 )
