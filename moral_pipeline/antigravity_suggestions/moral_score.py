@@ -39,9 +39,14 @@ OUT_DIR  = PIPELINE_ROOT / "saves/moral_score_results"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # ─── Question-type routing ───────────────────────────────────────────────────
+# All 15 confirmed qtypes from actual data:
+# spatial, velocity, physics, near_miss, counterfactual,  ← SVA (numeric GT)
+# safety, gap, planning, zone, ethical,                   ← ASA (action GT)
+# occlusion, trajectory, multi_conflict, sensor_limit, radar  ← ASA (action GT, no numeric)
 SVA_QTYPES = {"spatial", "velocity", "physics", "near_miss", "counterfactual"}
-ASA_QTYPES = {"safety", "gap", "planning", "zone", "ethical"}
-SER_SAFETY_CRITICAL = {"safety", "gap", "planning"}   # must have N >= 30 for valid SER
+ASA_QTYPES = {"safety", "gap", "planning", "zone", "ethical",
+              "occlusion", "trajectory", "multi_conflict", "sensor_limit", "radar"}
+SER_SAFETY_CRITICAL = {"safety", "gap", "planning", "occlusion", "trajectory"}  # N >= 30 gate
 
 # ─── Action family matching ──────────────────────────────────────────────────
 ACTION_FAMILIES = {
@@ -141,9 +146,31 @@ def quality_tag_coverage(tags_list: list) -> dict:
     }
 
 
+def extract_action(record: dict) -> str:
+    """
+    Get predicted action. Uses pre-extracted pred_action field first.
+    Falls back to regex on pred text for zero-shot results where
+    pred_action is None (model buries action keyword in free text).
+    Ignores spurious matches like 'THE' that aren't valid actions.
+    """
+    VALID_ACTIONS = {"EMERGENCY_BRAKE", "BRAKE", "YIELD", "MAINTAIN", "STOP"}
+    pred_act = record.get("pred_action")
+    if pred_act and pred_act.upper() in VALID_ACTIONS:
+        return pred_act.upper()
+    # Fall back: scan pred text for action keyword
+    pred_text = record.get("pred", "") or ""
+    m = ACTION_PATTERN.search(pred_text)
+    if m:
+        candidate = m.group(1).upper()
+        if candidate in VALID_ACTIONS:
+            return candidate
+    return ""
+
+
 def unique_prediction_rate(records: list) -> float:
-    """Mode collapse indicator: fraction of unique pred_action values."""
-    actions = [r.get("pred_action", "") for r in records if r.get("pred_action")]
+    """Mode collapse indicator: fraction of unique extracted pred_action values."""
+    actions = [extract_action(r) for r in records]
+    actions = [a for a in actions if a]
     if not actions:
         return 0.0
     return len(set(actions)) / max(len(actions), 1)
@@ -174,8 +201,8 @@ def score_experiment(records: list, modality: str = "", verbose: bool = False) -
         qtype    = (r.get("qtype") or "").lower().strip()
         pred     = r.get("pred", "") or ""
         gt_val   = r.get("gt_value")
-        gt_act   = r.get("gt_action", "") or ""
-        pred_act = r.get("pred_action", "") or ""
+        gt_act   = (r.get("gt_action", "") or "").upper().strip()
+        pred_act = extract_action(r)
         bleu     = r.get("bleu")
         tags     = r.get("quality_tags") or []
 
