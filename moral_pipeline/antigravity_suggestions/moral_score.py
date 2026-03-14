@@ -174,23 +174,50 @@ def extract_action(record: dict) -> str:
     return ""
 
 
-def extract_gt_action(record: dict) -> str:
+def extract_gt_action(record: dict, gt_text: str = "") -> str:
     """
     Get ground-truth action.
     gt_action field is only populated for safety-critical qtypes (EMERGENCY_BRAKE/BRAKE).
-    For all other ASA qtypes (planning, zone, occlusion, etc.) the expected action
-    is embedded in the gt response text — extract it the same way as pred.
+    For all other ASA qtypes the action is in gt_text (joined from val JSONL assistant turn).
+    Falls back to natural-language synonym matching for cases like:
+      'apply the brakes' → BRAKE
+      'no immediate danger' / 'no object will enter' → MAINTAIN
+      'reduce speed' → YIELD
     """
     VALID_ACTIONS = {"EMERGENCY_BRAKE", "BRAKE", "YIELD", "MAINTAIN", "STOP"}
+
+    # 1. Pre-extracted field (safety-critical samples only)
     gt_act = record.get("gt_action")
     if gt_act and gt_act.upper() in VALID_ACTIONS:
         return gt_act.upper()
-    gt_text = record.get("gt", "") or ""
-    m = ACTION_PATTERN.search(gt_text)
-    if m:
-        candidate = m.group(1).upper()
-        if candidate in VALID_ACTIONS:
-            return candidate
+
+    # 2. Clean keyword in GT response text
+    if gt_text:
+        m = ACTION_PATTERN.search(gt_text)
+        if m and m.group(1).upper() in VALID_ACTIONS:
+            return m.group(1).upper()
+
+    # 3. Natural-language synonym map (ordered most-specific first)
+    # Compiled once — matches against lowercased gt_text
+    SYNONYMS = [
+        (re.compile(r"emergency\s+brak|immediate\s+brak|slam.{0,10}brak|full\s+brak", re.I), "EMERGENCY_BRAKE"),
+        (re.compile(r"apply.{0,15}brak|must\s+brak|need.{0,10}brak|requires?.{0,10}brak"
+                    r"|reduce\s+speed\s+immediately|hard\s+brak", re.I), "BRAKE"),
+        (re.compile(r"reduce\s+speed|slow\s+down|decelerat|yield|give\s+way"
+                    r"|increase.{0,20}following\s+dist|cautious.{0,20}approach", re.I), "YIELD"),
+        (re.compile(r"no\s+(?:immediate\s+)?(?:danger|risk|threat|object|collision)"
+                    r"|safe\s+to\s+(?:proceed|continue|maintain)"
+                    r"|maintain.{0,20}(?:speed|course|lane)"
+                    r"|no\s+action\s+required"
+                    r"|within\s+safe|does\s+not\s+enter|will\s+not\s+enter", re.I), "MAINTAIN"),
+        (re.compile(r"come\s+to\s+a\s+(?:full\s+)?stop|must\s+stop|should\s+stop"
+                    r"|bring.{0,15}to\s+a\s+(?:full\s+)?stop", re.I), "STOP"),
+    ]
+
+    for pattern, action in SYNONYMS:
+        if pattern.search(gt_text):
+            return action
+
     return ""
 
 
@@ -207,9 +234,11 @@ def unique_prediction_rate(records: list) -> float:
 # Core scoring
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def score_experiment(records: list, modality: str = "", verbose: bool = False) -> dict:
+def score_experiment(records: list, modality: str = "", verbose: bool = False,
+                     gt_lookup: dict = None) -> dict:
     """
     Compute all Layer 1+2 metrics for a list of JSONL records.
+    gt_lookup: optional {idx -> gt_response_text} joined from val JSONL.
     Returns a results dict.
     """
     sva_num = sva_den = 0
@@ -228,7 +257,9 @@ def score_experiment(records: list, modality: str = "", verbose: bool = False) -
         qtype    = (r.get("qtype") or "").lower().strip()
         pred     = r.get("pred", "") or ""
         gt_val   = r.get("gt_value")
-        gt_act   = extract_gt_action(r)
+        idx      = r.get("idx")
+        gt_text  = (gt_lookup.get(idx, "") if gt_lookup and idx is not None else "")
+        gt_act   = extract_gt_action(r, gt_text=gt_text)
         pred_act = extract_action(r)
         bleu     = r.get("bleu")
         tags     = r.get("quality_tags") or []
@@ -401,6 +432,39 @@ def load_jsonl(path: Path) -> list[dict]:
     return records
 
 
+# Val JSONL paths — used to join GT response text for ASA scoring
+VAL_JSONL_MAP = {
+    "B": PIPELINE_ROOT / "02_cosmos_integration/hf_data/local_conditionB_val.jsonl",
+    "D": PIPELINE_ROOT / "02_cosmos_integration/hf_data/local_conditionD_val.jsonl",
+    "E": PIPELINE_ROOT / "02_cosmos_integration/hf_data/clean_conditionE_val.jsonl",
+}
+
+def load_gt_lookup(eval_cond: str) -> dict:
+    """
+    Build {idx -> gt_response_text} from the val JSONL assistant turns.
+    idx is the 0-based line number, matching the idx field in results files.
+    Returns empty dict if val JSONL not found (scoring degrades gracefully).
+    """
+    path = VAL_JSONL_MAP.get((eval_cond or "").upper())
+    if not path or not path.exists():
+        return {}
+    lookup = {}
+    with open(path) as f:
+        for i, line in enumerate(f):
+            try:
+                rec = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            for m in rec.get("messages", []):
+                if m.get("role") == "assistant":
+                    lookup[i] = m.get("content", "")
+                    break
+    return lookup
+
+
+# Cache gt lookups — each condition loaded at most once per run
+_gt_lookup_cache: dict = {}
+
 def run_all(filter_exp: str = None, verbose: bool = False) -> dict:
     """Score all discovered experiments. Returns {exp_key: score_dict}."""
     experiments = discover_all_experiments()
@@ -414,9 +478,16 @@ def run_all(filter_exp: str = None, verbose: bool = False) -> dict:
         if filter_exp and filter_exp not in exp_key:
             continue
 
+        # Load GT lookup for this condition (cached)
+        cond = (meta.get("eval_cond") or "").upper()
+        if cond not in _gt_lookup_cache:
+            _gt_lookup_cache[cond] = load_gt_lookup(cond)
+        gt_lookup = _gt_lookup_cache[cond]
+
         print(f"  Scoring: {meta['path'].name} ...", end="", flush=True)
         records = load_jsonl(meta["path"])
-        scores  = score_experiment(records, modality=meta.get("modality", ""), verbose=verbose)
+        scores  = score_experiment(records, modality=meta.get("modality", ""),
+                                   verbose=verbose, gt_lookup=gt_lookup)
         scores.update(meta)
         scores["exp_key"] = exp_key
         results[exp_key]  = scores
