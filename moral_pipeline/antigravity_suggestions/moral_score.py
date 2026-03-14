@@ -134,32 +134,59 @@ def sva_match(pred_text: str, gt_value: float | None, tolerance: float = 0.20) -
     return abs(pred_val - gt_value) / abs(gt_value) <= tolerance
 
 
-def quality_tag_coverage(tags_list: list) -> dict:
-    """Return dict of which RSQ tags were present."""
-    tags = set(tags_list) if tags_list else set()
+def quality_tag_coverage(tags) -> dict:
+    """
+    Return dict of which RSQ tags were present.
+    Handles two formats found in results files:
+      - list:  ["[BEV]", "[CAM]", ...]           (fine-tuned)
+      - dict:  {"[BEV]": true, "[CAM]": false}   (zero-shot)
+    """
+    if isinstance(tags, dict):
+        present = {k for k, v in tags.items() if v}
+    elif isinstance(tags, list):
+        present = set(tags)
+    else:
+        present = set()
     return {
-        "BEV":      "[BEV]"      in tags,
-        "CAM":      "[CAM]"      in tags,
-        "GT":       "[GT]"       in tags,
-        "DECISION": "[DECISION]" in tags,
-        "all_four": all(t in tags for t in ["[BEV]", "[CAM]", "[GT]", "[DECISION]"]),
+        "BEV":      "[BEV]"      in present,
+        "CAM":      "[CAM]"      in present,
+        "GT":       "[GT]"       in present,
+        "DECISION": "[DECISION]" in present,
+        "all_four": all(t in present for t in ["[BEV]", "[CAM]", "[GT]", "[DECISION]"]),
     }
 
 
 def extract_action(record: dict) -> str:
     """
     Get predicted action. Uses pre-extracted pred_action field first.
-    Falls back to regex on pred text for zero-shot results where
-    pred_action is None (model buries action keyword in free text).
-    Ignores spurious matches like 'THE' that aren't valid actions.
+    Falls back to regex on pred text (zero-shot buries action in free text).
     """
     VALID_ACTIONS = {"EMERGENCY_BRAKE", "BRAKE", "YIELD", "MAINTAIN", "STOP"}
     pred_act = record.get("pred_action")
     if pred_act and pred_act.upper() in VALID_ACTIONS:
         return pred_act.upper()
-    # Fall back: scan pred text for action keyword
     pred_text = record.get("pred", "") or ""
     m = ACTION_PATTERN.search(pred_text)
+    if m:
+        candidate = m.group(1).upper()
+        if candidate in VALID_ACTIONS:
+            return candidate
+    return ""
+
+
+def extract_gt_action(record: dict) -> str:
+    """
+    Get ground-truth action.
+    gt_action field is only populated for safety-critical qtypes (EMERGENCY_BRAKE/BRAKE).
+    For all other ASA qtypes (planning, zone, occlusion, etc.) the expected action
+    is embedded in the gt response text — extract it the same way as pred.
+    """
+    VALID_ACTIONS = {"EMERGENCY_BRAKE", "BRAKE", "YIELD", "MAINTAIN", "STOP"}
+    gt_act = record.get("gt_action")
+    if gt_act and gt_act.upper() in VALID_ACTIONS:
+        return gt_act.upper()
+    gt_text = record.get("gt", "") or ""
+    m = ACTION_PATTERN.search(gt_text)
     if m:
         candidate = m.group(1).upper()
         if candidate in VALID_ACTIONS:
@@ -201,7 +228,7 @@ def score_experiment(records: list, modality: str = "", verbose: bool = False) -
         qtype    = (r.get("qtype") or "").lower().strip()
         pred     = r.get("pred", "") or ""
         gt_val   = r.get("gt_value")
-        gt_act   = (r.get("gt_action", "") or "").upper().strip()
+        gt_act   = extract_gt_action(r)
         pred_act = extract_action(r)
         bleu     = r.get("bleu")
         tags     = r.get("quality_tags") or []
