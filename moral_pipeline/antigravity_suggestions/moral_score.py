@@ -1,845 +1,661 @@
 #!/usr/bin/env python3
 """
-MoRAL-Score Compute + Novel Object Detection + HIL Sample Generator
-===================================================================
+moral_score.py — MoRAL Evaluation Pipeline
+Reads all result JSONL files and produces:
+  - Per-experiment SVA / ASA / SER / MoRAL-Score
+  - SGC sensor contribution heatmap
+  - Per-qtype breakdown
+  - 2B vs 8B, zero-shot vs fine-tuned comparisons
+  - Mode collapse (unique prediction %) audit
+  - Tables 1, 2, 3 → saves/moral_score_results/all_tables.md
 
-Computes the full MoRAL-Score metric (GSA, RSQ, ACT, SEN, NOV) on result files,
-detects novel objects not in GT, and exports samples for HIL evaluation.
+Field names confirmed from actual results files:
+  idx, scene, qtype, gt_action, pred_action, gt_ttc, pred_ttc,
+  gt_value, gt_field, bleu, quality_tags, pred
 
-USAGE:
-    # Compute MoRAL-Score (auto metrics only, no API needed):
-    python moral_score.py \
-        --results_dir /path/to/saves/zeroshot_results \
-        --detections_dir /path/to/detections \
-        --output_dir saves/moral_score_results
-
-    # With LLM judge for SEN scoring:
-    python moral_score.py \
-        --results_dir /path/to/saves/zeroshot_results \
-        --provider anthropic --model claude-sonnet-4-20250514
-
-    # Generate HIL evaluation samples:
-    python moral_score.py \
-        --results_dir /path/to/saves/zeroshot_results \
-                      /path/to/saves/finetuned_results \
-        --hil --hil_per_qtype 2
-
-    # Compare multiple runs:
-    python moral_score.py \
-        --results_dir /path/to/saves/zeroshot_results \
-                      /path/to/saves/finetuned_results \
-        --compare
+Usage:
+  python3 moral_score.py                          # run all experiments
+  python3 moral_score.py --experiment img__B      # single experiment
+  python3 moral_score.py --tables-only            # skip scoring, regenerate tables
+  python3 moral_score.py --verbose                # print per-experiment details
 """
 
-import argparse
-import json
-import os
 import re
-import sys
-import csv
-import time
-import random
+import json
+import glob
+import argparse
+import os
 from pathlib import Path
 from collections import defaultdict
-from typing import Optional
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# S₁: GSA — Grounded Spatial Accuracy
-# ═══════════════════════════════════════════════════════════════════════════════
+# ─── Paths ──────────────────────────────────────────────────────────────────
+PIPELINE_ROOT = Path(os.environ.get("MORAL_ROOT", Path.home() / "workspace/amb_ws/bevfusionV2/moral_pipeline"))
+ZS_DIR   = PIPELINE_ROOT / "saves/zeroshot_results"
+ZS_8B    = PIPELINE_ROOT / "saves/zeroshot_results_8B"
+FT_DIR   = PIPELINE_ROOT / "saves/finetuned_results"
+FT_AWS   = PIPELINE_ROOT / "saves/finetuned_results_aws"
+FT_8B    = PIPELINE_ROOT / "saves/finetuned_results_8b"
+OUT_DIR  = PIPELINE_ROOT / "saves/moral_score_results"
+OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# Per-qtype thresholds: (exact, good, partial)
-GSA_THRESHOLDS = {
-    "spatial":        {"field": "distance_m",           "exact": 0.10, "good": 0.20, "partial": 0.50, "type": "pct"},
-    "safety":         {"field": "ttc_s",                "exact": 0.15, "good": 0.30, "partial": 0.50, "type": "pct"},
-    "velocity":       {"field": "velocity_ms",          "exact": 0.15, "good": 0.30, "partial": 0.50, "type": "pct"},
-    "physics":        {"field": "nearest_ahead_m",      "exact": 0.10, "good": 0.20, "partial": 0.50, "type": "pct"},
-    "counterfactual": {"field": "t_impact_s",           "exact": 0.20, "good": 0.40, "partial": 0.60, "type": "pct"},
-    "planning":       {"field": "min_ttc_s",            "exact": 0.15, "good": 0.30, "partial": 0.50, "type": "pct"},
-    "ethical":        {"field": "min_dilemma_ttc_s",    "exact": 0.20, "good": 0.40, "partial": None, "type": "pct"},
-    "multi_conflict": {"field": "top_risk_score",       "exact": 0.15, "good": 0.30, "partial": 0.50, "type": "pct"},
-    "trajectory":     {"field": "objects_entering_path","exact": 0,    "good": 1,    "partial": 2,    "type": "abs"},
-    "near_miss":      {"field": "near_miss_count",      "exact": 0,    "good": 1,    "partial": 2,    "type": "abs"},
-    "sensor_limit":   {"field": "gt_estimated_count",   "exact": 0,    "good": 1,    "partial": 2,    "type": "abs"},
+# ─── Question-type routing ───────────────────────────────────────────────────
+SVA_QTYPES = {"spatial", "velocity", "physics", "near_miss", "counterfactual"}
+ASA_QTYPES = {"safety", "gap", "planning", "zone", "ethical"}
+SER_SAFETY_CRITICAL = {"safety", "gap", "planning"}   # must have N >= 30 for valid SER
+
+# ─── Action family matching ──────────────────────────────────────────────────
+ACTION_FAMILIES = {
+    "EMERGENCY_BRAKE": {"EMERGENCY_BRAKE", "BRAKE", "STOP"},
+    "BRAKE":           {"BRAKE", "EMERGENCY_BRAKE", "STOP"},
+    "YIELD":           {"YIELD", "BRAKE"},
+    "MAINTAIN":        {"MAINTAIN"},
+    "STOP":            {"STOP", "BRAKE", "EMERGENCY_BRAKE"},
 }
 
-# Qualitative qtypes (no numeric GT — scored by LLM or HIL only)
-QUALITATIVE_QTYPES = {"occlusion", "gap", "zone"}
+# SER asymmetric cost weights: (gt_action → pred_action) = cost
+SER_COSTS = {
+    ("STOP",            "MAINTAIN"): 1.0,
+    ("STOP",            "YIELD"):    0.5,
+    ("EMERGENCY_BRAKE", "MAINTAIN"): 1.0,
+    ("EMERGENCY_BRAKE", "YIELD"):    0.5,
+    ("BRAKE",           "MAINTAIN"): 0.7,
+    ("BRAKE",           "YIELD"):    0.3,
+    ("YIELD",           "MAINTAIN"): 0.5,
+}
 
-def extract_number_from_text(text: str, gt_field: str) -> Optional[float]:
-    """Extract a numeric value from model output relevant to the GT field."""
-    # Try field-specific patterns first
-    field_hints = {
-        "distance_m": [r"(\d+\.?\d*)\s*(?:m\b|meter)", r"(?:distance|far|away|ahead|behind).*?(\d+\.?\d*)",
-                       r"(\d+\.?\d*)\s*m\b"],
-        "ttc_s": [r"(?:TTC|time.to.collision|reach|impact).*?(\d+\.?\d*)\s*(?:s|sec|second)",
-                  r"(\d+\.?\d*)\s*(?:s|sec|second)"],
-        "velocity_ms": [r"(\d+\.?\d*)\s*(?:m/?s|meters?\s*per\s*second)",
-                        r"(?:speed|velocity|moving).*?(\d+\.?\d*)"],
-        "nearest_ahead_m": [r"(\d+\.?\d*)\s*(?:m\b|meter)", r"(?:nearest|closest|ahead).*?(\d+\.?\d*)"],
-        "objects_entering_path": [r"(\d+)\s*(?:object|vehicle|car|pedestrian)",
-                                  r"(?:enter|cross|intersect).*?(\d+)"],
-        "near_miss_count": [r"(\d+)\s*(?:near.miss|close.call)", r"(?:near.miss|close).*?(\d+)"],
-        "gt_estimated_count": [r"(\d+)\s*(?:object|detection|vehicle)"],
-    }
+# ─── Composite weights ───────────────────────────────────────────────────────
+W_SVA = 0.35
+W_ASA = 0.30
+W_RQS = 0.20
+W_SER = 0.15
 
-    patterns = field_hints.get(gt_field, [])
-    for pat in patterns:
-        match = re.search(pat, text, re.IGNORECASE)
-        if match:
-            try:
-                return float(match.group(1))
-            except (ValueError, IndexError):
-                continue
+# ─── Degraded modalities (SER computed but NOT in composite) ─────────────────
+DEGRADED_MODALITIES = {"lidar_only", "radar_only", "cam_only", "bev_only",
+                       "clean_lidar_only", "clean_radar_only"}
+FULL_SENSOR_MODALITIES = {"clean_lidar", "clean_radar", "img", "img+det"}
 
-    # Fallback: find reasonable numbers
-    numbers = re.findall(r"(\d+\.?\d+)", text)
-    for n in numbers:
-        val = float(n)
-        if 0.1 < val < 500:
-            return val
+# ─── Regex patterns ──────────────────────────────────────────────────────────
+NUM_PATTERN   = re.compile(r"([0-9]+\.?[0-9]*)\s*(?:m(?:eters?|etres?)?|km/h|m/s|s(?:econds?)?)?", re.IGNORECASE)
+ACTION_PATTERN = re.compile(r"\b(EMERGENCY_BRAKE|BRAKE|YIELD|MAINTAIN|STOP)\b", re.IGNORECASE)
+TAG_PATTERN    = re.compile(r"\[(BEV|CAM|GT|DECISION)\]")
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Helpers
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def action_family_match(pred: str, gt: str) -> bool:
+    """True if pred falls within the allowed family for gt."""
+    if not pred or not gt:
+        return False
+    pred_up = pred.strip().upper()
+    gt_up   = gt.strip().upper()
+    family  = ACTION_FAMILIES.get(gt_up, {gt_up})
+    return pred_up in family
+
+
+def ser_cost(gt_action: str, pred_action: str) -> float:
+    """Return SER cost for a safety-critical sample. 0 if action is safe/correct."""
+    if not gt_action or not pred_action:
+        return 0.0
+    gt_up   = gt_action.strip().upper()
+    pred_up = pred_action.strip().upper()
+    # Only penalise conservative→permissive errors
+    return SER_COSTS.get((gt_up, pred_up), 0.0)
+
+
+def extract_numeric(text: str) -> float | None:
+    """Extract first numeric value from prediction text."""
+    if not text:
+        return None
+    m = NUM_PATTERN.search(text)
+    if m:
+        try:
+            return float(m.group(1))
+        except ValueError:
+            return None
     return None
 
 
-def compute_gsa(sample: dict) -> Optional[float]:
-    """Compute GSA sub-score for a single sample. Returns 0-100 or None."""
-    qtype = sample.get("qtype", "")
-    gt_value = sample.get("gt_value")
-    pred_text = sample.get("pred", "")
-
-    if qtype in QUALITATIVE_QTYPES:
-        return None  # Must be scored by LLM/HIL
-
+def sva_match(pred_text: str, gt_value: float | None, tolerance: float = 0.20) -> bool:
+    """True if extracted numeric prediction is within ±tolerance of gt_value."""
     if gt_value is None:
-        return None
-
-    config = GSA_THRESHOLDS.get(qtype)
-    if not config:
-        return None
-
-    pred_val = extract_number_from_text(pred_text, config["field"])
+        return False
+    pred_val = extract_numeric(pred_text)
     if pred_val is None:
-        return 0.0  # Model didn't produce a number
-
-    if config["type"] == "pct":
-        # Percentage-based threshold
-        denom = max(0.01, abs(gt_value))
-        error = abs(pred_val - gt_value) / denom
-        if error <= config["exact"]:
-            return 100.0
-        elif error <= config["good"]:
-            return 75.0
-        elif config.get("partial") and error <= config["partial"]:
-            return 40.0
-        else:
-            return 0.0
-    else:
-        # Absolute threshold (integer counts)
-        error = abs(pred_val - gt_value)
-        if error <= config["exact"]:
-            return 100.0
-        elif error <= config["good"]:
-            return 75.0
-        elif config.get("partial") and error <= config["partial"]:
-            return 40.0
-        else:
-            return 0.0
+        return False
+    if gt_value == 0:
+        return pred_val == 0
+    return abs(pred_val - gt_value) / abs(gt_value) <= tolerance
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# S₂: RSQ — Reasoning Structure Quality
-# ═══════════════════════════════════════════════════════════════════════════════
-
-def compute_rsq(sample: dict) -> float:
-    """Compute RSQ sub-score. Returns 0-100."""
-    pred = sample.get("pred", "")
-    score = 0
-
-    # Check for structured sections
-    has_bev = bool(re.search(r'\[BEV\]', pred))
-    has_cam = bool(re.search(r'\[CAM\]', pred))
-    has_gt = bool(re.search(r'\[GT\]', pred))
-    has_decision = bool(re.search(r'\[DECISION\]', pred))
-
-    if has_bev:
-        score += 25
-    if has_cam:
-        score += 25
-    if has_gt:
-        score += 25
-        # Bonus: GT section has concrete numbers
-        gt_section = ""
-        if has_decision:
-            parts = re.split(r'\[DECISION\]', re.split(r'\[GT\]', pred)[-1])
-            gt_section = parts[0] if parts else ""
-        else:
-            gt_section = re.split(r'\[GT\]', pred)[-1]
-        if re.search(r'\d+\.?\d*\s*m', gt_section):
-            score += 5
-    if has_decision:
-        score += 25
-        # Bonus: decision references TTC
-        dec_section = re.split(r'\[DECISION\]', pred)[-1] if has_decision else ""
-        if re.search(r'TTC|time.to.collision', dec_section, re.IGNORECASE):
-            score += 5
-
-    return min(100.0, float(score))
+def quality_tag_coverage(tags_list: list) -> dict:
+    """Return dict of which RSQ tags were present."""
+    tags = set(tags_list) if tags_list else set()
+    return {
+        "BEV":      "[BEV]"      in tags,
+        "CAM":      "[CAM]"      in tags,
+        "GT":       "[GT]"       in tags,
+        "DECISION": "[DECISION]" in tags,
+        "all_four": all(t in tags for t in ["[BEV]", "[CAM]", "[GT]", "[DECISION]"]),
+    }
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# S₃: ACT — Action Decision Accuracy
-# ═══════════════════════════════════════════════════════════════════════════════
-
-ACTION_FAMILIES = {
-    "BRAKE":      {"BRAKE", "EMERGENCY_BRAKE", "HARD_BRAKE", "STOP"},
-    "MAINTAIN":   {"MAINTAIN", "CONTINUE", "CRUISE"},
-    "ACCELERATE": {"ACCELERATE", "SPEED_UP"},
-    "YIELD":      {"YIELD", "WAIT", "SLOW_DOWN"},
-    "EVADE":      {"SWERVE", "LANE_CHANGE", "MERGE"},
-}
-
-# Broader: brake-like vs go-like
-ACTION_DIRECTIONS = {
-    "DECELERATE": {"BRAKE", "EMERGENCY_BRAKE", "HARD_BRAKE", "STOP", "YIELD", "WAIT", "SLOW_DOWN"},
-    "PROCEED":    {"MAINTAIN", "CONTINUE", "CRUISE", "ACCELERATE", "SPEED_UP"},
-    "MANEUVER":   {"SWERVE", "LANE_CHANGE", "MERGE"},
-}
-
-def compute_act(sample: dict) -> Optional[float]:
-    """Compute ACT sub-score. Returns 0-100 or None if no GT action."""
-    gt = sample.get("gt_action", "")
-    pred = sample.get("pred_action", "")
-
-    if not gt:
-        return None  # No GT action for this qtype
-
-    if not pred:
+def unique_prediction_rate(records: list) -> float:
+    """Mode collapse indicator: fraction of unique pred_action values."""
+    actions = [r.get("pred_action", "") for r in records if r.get("pred_action")]
+    if not actions:
         return 0.0
-
-    gt_upper = gt.upper().strip()
-    pred_upper = pred.upper().strip()
-
-    # Exact match
-    if gt_upper == pred_upper:
-        return 100.0
-
-    # Family match
-    gt_fam = None
-    pred_fam = None
-    for fam, members in ACTION_FAMILIES.items():
-        if gt_upper in members:
-            gt_fam = fam
-        if pred_upper in members:
-            pred_fam = fam
-    if gt_fam and gt_fam == pred_fam:
-        return 75.0
-
-    # Direction match
-    gt_dir = None
-    pred_dir = None
-    for direction, members in ACTION_DIRECTIONS.items():
-        if gt_upper in members:
-            gt_dir = direction
-        if pred_upper in members:
-            pred_dir = direction
-    if gt_dir and gt_dir == pred_dir:
-        return 40.0
-
-    return 0.0
+    return len(set(actions)) / max(len(actions), 1)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# S₅: NOV — Novel Detection Capability
+# Core scoring
 # ═══════════════════════════════════════════════════════════════════════════════
 
-OBJECT_CLASSES = {
-    'car', 'truck', 'bus', 'trailer', 'motorcycle', 'bicycle',
-    'pedestrian', 'traffic_cone', 'barrier', 'construction_vehicle',
-    'vehicle', 'cyclist', 'motorbike', 'van', 'person',
-}
-
-# Synonyms → canonical
-CLASS_SYNONYMS = {
-    'vehicle': 'car', 'van': 'car', 'sedan': 'car', 'suv': 'car',
-    'person': 'pedestrian', 'walker': 'pedestrian', 'man': 'pedestrian',
-    'woman': 'pedestrian', 'child': 'pedestrian',
-    'cyclist': 'bicycle', 'biker': 'bicycle', 'bike': 'bicycle',
-    'motorbike': 'motorcycle', 'scooter': 'motorcycle',
-    'cone': 'traffic_cone',
-}
-
-def canonicalize_class(cls: str) -> str:
-    """Normalize class name to canonical form."""
-    cls = cls.lower().strip()
-    return CLASS_SYNONYMS.get(cls, cls)
-
-
-def extract_mentioned_objects(pred_text: str) -> list:
-    """Extract objects mentioned in model output with approximate distances."""
-    mentions = []
-    seen = set()
-
-    for cls in OBJECT_CLASSES:
-        # Pattern: "a <class> at/approximately <N> meters"
-        patterns = [
-            rf'({cls})\s+(?:at|approximately|about|roughly|within|is)\s+(\d+\.?\d*)\s*(?:m\b|meter)',
-            rf'({cls}).*?(\d+\.?\d*)\s*(?:m\b|meter)',
-            rf'(?:nearest|closest)\s+({cls}).*?(\d+\.?\d*)',
-        ]
-        for pat in patterns:
-            for m in re.finditer(pat, pred_text, re.IGNORECASE):
-                canon = canonicalize_class(m.group(1))
-                dist = float(m.group(2))
-                key = f"{canon}_{dist:.0f}"
-                if key not in seen and 0.5 < dist < 200:
-                    seen.add(key)
-                    mentions.append({
-                        'class': canon,
-                        'distance_m': dist,
-                        'text_span': m.group(0)[:100],
-                    })
-
-    return mentions
-
-
-def find_novel_detections(mentioned: list, gt_detections: list,
-                          match_radius: float = 5.0) -> dict:
+def score_experiment(records: list, modality: str = "", verbose: bool = False) -> dict:
     """
-    Compare model-mentioned objects against GT detections.
-    Returns dict with 'matched', 'novel', 'gt_missed'.
+    Compute all Layer 1+2 metrics for a list of JSONL records.
+    Returns a results dict.
     """
-    matched = []
-    novel = []
-    gt_matched_flags = [False] * len(gt_detections)
+    sva_num = sva_den = 0
+    asa_num = asa_den = 0
+    ser_full_sum = ser_full_den = 0
+    ser_deg_sum  = ser_deg_den  = 0
+    bleu_scores  = []
+    tag_all_four = tag_total = 0
+    qtype_sva    = defaultdict(lambda: [0, 0])   # [correct, total]
+    qtype_asa    = defaultdict(lambda: [0, 0])
 
-    for mention in mentioned:
-        best_match = None
-        best_dist = float('inf')
+    is_degraded = any(m in modality for m in DEGRADED_MODALITIES)
+    is_full     = any(m in modality for m in FULL_SENSOR_MODALITIES) and not is_degraded
 
-        for i, gt in enumerate(gt_detections):
-            gt_cls = canonicalize_class(gt.get('category', gt.get('class', '')))
-            if canonicalize_class(mention['class']) != gt_cls:
-                continue
-            d = abs(mention['distance_m'] - gt.get('distance_m', float('inf')))
-            if d < match_radius and d < best_dist:
-                best_match = i
-                best_dist = d
+    for r in records:
+        qtype    = (r.get("qtype") or "").lower().strip()
+        pred     = r.get("pred", "") or ""
+        gt_val   = r.get("gt_value")
+        gt_act   = r.get("gt_action", "") or ""
+        pred_act = r.get("pred_action", "") or ""
+        bleu     = r.get("bleu")
+        tags     = r.get("quality_tags") or []
 
-        if best_match is not None:
-            matched.append({**mention, 'gt_index': best_match, 'match_error': best_dist})
-            gt_matched_flags[best_match] = True
-        else:
-            novel.append(mention)
+        # BLEU
+        if bleu is not None:
+            bleu_scores.append(float(bleu))
 
-    gt_missed = [gt for i, gt in enumerate(gt_detections) if not gt_matched_flags[i]]
+        # Quality tags
+        cov = quality_tag_coverage(tags)
+        tag_total += 1
+        if cov["all_four"]:
+            tag_all_four += 1
+
+        # SVA
+        if qtype in SVA_QTYPES:
+            hit = sva_match(pred, gt_val)
+            sva_num += int(hit)
+            sva_den += 1
+            qtype_sva[qtype][0] += int(hit)
+            qtype_sva[qtype][1] += 1
+
+        # ASA
+        if qtype in ASA_QTYPES:
+            hit = action_family_match(pred_act, gt_act)
+            asa_num += int(hit)
+            asa_den += 1
+            qtype_asa[qtype][0] += int(hit)
+            qtype_asa[qtype][1] += 1
+
+        # SER (safety error rate)
+        if qtype in SER_SAFETY_CRITICAL and gt_act:
+            cost = ser_cost(gt_act, pred_act)
+            if is_full:
+                ser_full_sum += cost
+                ser_full_den += 1
+            else:
+                ser_deg_sum += cost
+                ser_deg_den += 1
+
+    # Compute metrics
+    sva  = sva_num / sva_den if sva_den else None
+    asa  = asa_num / asa_den if asa_den else None
+    bleu = sum(bleu_scores) / len(bleu_scores) if bleu_scores else None
+    tag_pct = tag_all_four / tag_total if tag_total else None
+
+    ser_full  = (ser_full_sum / ser_full_den)  if ser_full_den >= 30  else None
+    ser_full_flag = "*" if (0 < ser_full_den < 30) else ""
+    ser_deg   = (ser_deg_sum  / ser_deg_den)   if ser_deg_den  >= 30  else None
+
+    ser_inv_full = (1 - ser_full) if ser_full is not None else None
+
+    # RQS placeholder (requires llm_judge.py output — filled by merge step)
+    rqs = None
+
+    # MoRAL-Score composite (only for full-sensor, non-degraded)
+    moral_score = None
+    if not is_degraded and sva is not None and asa is not None and ser_inv_full is not None:
+        rqs_val = rqs if rqs is not None else 0.0   # treat missing RQS as 0
+        moral_score = W_SVA * sva + W_ASA * asa + W_RQS * rqs_val + W_SER * ser_inv_full
+
+    unique_pct = unique_prediction_rate(records)
 
     return {
-        'matched': matched,
-        'novel': novel,
-        'gt_missed': gt_missed,
-        'n_matched': len(matched),
-        'n_novel': len(novel),
-        'n_gt_missed': len(gt_missed),
+        "n_samples":     len(records),
+        "sva":           round(sva, 4)  if sva  is not None else None,
+        "sva_n":         sva_den,
+        "asa":           round(asa, 4)  if asa  is not None else None,
+        "asa_n":         asa_den,
+        "bleu":          round(bleu, 4) if bleu is not None else None,
+        "tag_pct":       round(tag_pct, 4) if tag_pct is not None else None,
+        "ser_full":      round(ser_full, 4)     if ser_full  is not None else None,
+        "ser_full_flag": ser_full_flag,
+        "ser_full_n":    ser_full_den,
+        "ser_degraded":  round(ser_deg, 4)      if ser_deg   is not None else None,
+        "ser_deg_n":     ser_deg_den,
+        "ser_inv_full":  round(ser_inv_full, 4) if ser_inv_full is not None else None,
+        "rqs":           rqs,
+        "moral_score":   round(moral_score, 4)  if moral_score is not None else None,
+        "unique_pct":    round(unique_pct, 4),
+        "is_degraded":   is_degraded,
+        "qtype_sva":     {k: {"correct": v[0], "total": v[1],
+                              "pct": round(v[0]/v[1], 4) if v[1] else None}
+                          for k, v in qtype_sva.items()},
+        "qtype_asa":     {k: {"correct": v[0], "total": v[1],
+                              "pct": round(v[0]/v[1], 4) if v[1] else None}
+                          for k, v in qtype_asa.items()},
     }
 
 
-def compute_nov(sample: dict, gt_detections: list = None) -> dict:
+# ═══════════════════════════════════════════════════════════════════════════════
+# File discovery
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def parse_filename(path: Path) -> dict:
     """
-    Compute NOV sub-score.
-    Returns dict with score (0-100) and novel detection details.
+    Extract metadata from result filename.
+    Handles patterns:
+      results_cosmos_reason2_2b__{modality}__{condition}.jsonl          (zero-shot 2B)
+      results_cosmos_reason2_8b__{modality}__{condition}.jsonl          (zero-shot 8B)
+      results_cosmos2b_cond{X}_finetuned__{modality}__{condition}.jsonl (fine-tuned 2B)
+      results_moral_cosmos2b_cond{X}__{modality}__{condition}.jsonl     (fine-tuned 2B alt)
+      results_cosmos2b_cond{D}_8b_finetuned__{modality}__{condition}    (fine-tuned 8B)
     """
-    pred_text = sample.get("pred", "")
-    mentioned = extract_mentioned_objects(pred_text)
+    stem = path.stem  # filename without .jsonl
+    meta = {"path": path, "raw_name": stem}
 
-    result = {
-        'mentioned_objects': mentioned,
-        'n_mentioned': len(mentioned),
-        'novel_detections': [],
-        'novel_score': 50.0,  # Neutral default
-    }
-
-    if not mentioned:
-        return result
-
-    if gt_detections:
-        detection_result = find_novel_detections(mentioned, gt_detections)
-        result.update(detection_result)
-
-        # Score: +20 per novel, capped at 100
-        n_novel = detection_result['n_novel']
-        if n_novel > 0:
-            result['novel_score'] = min(100.0, 50.0 + n_novel * 20.0)
-            result['novel_detections'] = detection_result['novel']
-        else:
-            result['novel_score'] = 50.0  # Neutral — everything matched GT
+    # Model size
+    if "8b" in stem.lower():
+        meta["model_size"] = "8B"
     else:
-        # Without GT detections, we can still count mentioned objects
-        result['novel_score'] = 50.0  # Can't verify without GT
+        meta["model_size"] = "2B"
 
-    return result
+    # Zero-shot vs fine-tuned
+    if "finetuned" in stem or ("moral_cosmos" in stem and "zeroshot" not in stem):
+        meta["eval_type"] = "finetuned"
+    else:
+        meta["eval_type"] = "zeroshot"
+
+    # Training condition (for fine-tuned)
+    cond_match = re.search(r"cond([BDE])", stem, re.IGNORECASE)
+    meta["train_cond"] = cond_match.group(1).upper() if cond_match else None
+
+    # Extract modality and eval condition from the __ separated parts
+    parts = stem.split("__")
+    if len(parts) >= 3:
+        meta["modality"]   = parts[-2]
+        raw_cond = parts[-1].split("_cleanbev")[0]   # strip _cleanbev suffix
+        meta["eval_cond"]  = raw_cond.upper()
+    elif len(parts) == 2:
+        meta["modality"]  = parts[-1]
+        meta["eval_cond"] = None
+    else:
+        meta["modality"]  = None
+        meta["eval_cond"] = None
+
+    return meta
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Combined MoRAL-Score
-# ═══════════════════════════════════════════════════════════════════════════════
+def discover_all_experiments() -> list[dict]:
+    """Find all result JSONL files across all save directories."""
+    experiments = []
+    dirs = [ZS_DIR, ZS_8B, FT_DIR, FT_AWS, FT_8B]
 
-WEIGHTS = {
-    "gsa": 0.25,
-    "rsq": 0.20,
-    "act": 0.20,
-    "sen": 0.20,
-    "nov": 0.15,
-}
+    for d in dirs:
+        if not d.exists():
+            continue
+        for f in sorted(d.glob("results_*.jsonl")):
+            meta = parse_filename(f)
+            meta["save_dir"] = d.name
+            experiments.append(meta)
 
-def compute_moral_score(sample: dict, gt_detections: list = None,
-                        sen_score: float = None) -> dict:
-    """
-    Compute full MoRAL-Score for a single sample.
-    
-    Args:
-        sample: Result dict from evaluation JSONL
-        gt_detections: Optional list of GT detection dicts for NOV scoring
-        sen_score: Optional SEN score from LLM judge (0-100)
-    
-    Returns:
-        Dict with all sub-scores and combined MoRAL-Score
-    """
-    gsa = compute_gsa(sample)
-    rsq = compute_rsq(sample)
-    act = compute_act(sample)
-    nov_result = compute_nov(sample, gt_detections)
-    nov = nov_result['novel_score']
-
-    # SEN defaults to 50 if no LLM judge
-    sen = sen_score if sen_score is not None else 50.0
-
-    # Combine with weights (skip None scores)
-    scores = {}
-    weighted_sum = 0.0
-    total_weight = 0.0
-
-    for name, val, weight in [("gsa", gsa, WEIGHTS["gsa"]),
-                               ("rsq", rsq, WEIGHTS["rsq"]),
-                               ("act", act, WEIGHTS["act"]),
-                               ("sen", sen, WEIGHTS["sen"]),
-                               ("nov", nov, WEIGHTS["nov"])]:
-        scores[name] = val
-        if val is not None:
-            weighted_sum += val * weight
-            total_weight += weight
-
-    moral_score = weighted_sum / max(0.01, total_weight)
-
-    return {
-        "moral_score": round(moral_score, 1),
-        "gsa": gsa,
-        "rsq": rsq,
-        "act": act,
-        "sen": sen,
-        "nov": nov,
-        "nov_details": {
-            "n_mentioned": nov_result['n_mentioned'],
-            "n_novel": len(nov_result.get('novel_detections', [])),
-            "novel_objects": nov_result.get('novel_detections', []),
-        },
-        "weights_used": total_weight,
-    }
+    return experiments
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Aggregation
+# Load and score
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def aggregate_moral_scores(scored_samples: list) -> dict:
-    """Aggregate per-sample MoRAL-Scores into summary statistics."""
-    summary = {"total": len(scored_samples)}
-
-    for key in ["moral_score", "gsa", "rsq", "act", "sen", "nov"]:
-        vals = [s["scores"][key] for s in scored_samples
-                if s["scores"].get(key) is not None]
-        if vals:
-            summary[key] = {
-                "mean": round(sum(vals) / len(vals), 1),
-                "median": round(sorted(vals)[len(vals) // 2], 1),
-                "min": round(min(vals), 1),
-                "max": round(max(vals), 1),
-                "n": len(vals),
-            }
-
-    # Per question type
-    by_qtype = defaultdict(list)
-    for s in scored_samples:
-        by_qtype[s.get("qtype", "unknown")].append(s)
-
-    summary["by_qtype"] = {}
-    for qtype, samples in sorted(by_qtype.items()):
-        ms_vals = [s["scores"]["moral_score"] for s in samples
-                   if s["scores"].get("moral_score") is not None]
-        summary["by_qtype"][qtype] = {
-            "n": len(samples),
-            "moral_score_mean": round(sum(ms_vals) / len(ms_vals), 1) if ms_vals else None,
-        }
-        for key in ["gsa", "rsq", "act"]:
-            vals = [s["scores"][key] for s in samples if s["scores"].get(key) is not None]
-            if vals:
-                summary["by_qtype"][qtype][f"{key}_mean"] = round(sum(vals) / len(vals), 1)
-
-    # Novel detection summary
-    all_novel = []
-    for s in scored_samples:
-        novels = s["scores"].get("nov_details", {}).get("novel_objects", [])
-        for n in novels:
-            all_novel.append({**n, "scene": s.get("scene"), "qtype": s.get("qtype")})
-
-    summary["novel_detections"] = {
-        "total_novel": len(all_novel),
-        "unique_classes": list(set(n["class"] for n in all_novel)),
-        "examples": all_novel[:10],
-    }
-
-    return summary
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# HIL Sample Export
-# ═══════════════════════════════════════════════════════════════════════════════
-
-def generate_hil_samples(scored_samples: list, n_per_qtype: int = 2,
-                         output_path: Path = None) -> list:
-    """
-    Generate stratified HIL evaluation samples.
-    Exports CSV + JSON for human evaluators.
-    """
-    by_qtype = defaultdict(list)
-    for s in scored_samples:
-        by_qtype[s.get("qtype", "unknown")].append(s)
-
-    selected = []
-    for qtype, samples in sorted(by_qtype.items()):
-        # Pick n_per_qtype with diverse scenes
-        random.seed(42)
-        n = min(n_per_qtype, len(samples))
-        picked = random.sample(samples, n)
-        selected.extend(picked)
-
-    random.shuffle(selected)
-
-    # Assign blind IDs (so human doesn't know which model)
-    for i, s in enumerate(selected):
-        s["hil_id"] = f"EVAL_{i+1:03d}"
-
-    if output_path:
-        output_path.mkdir(parents=True, exist_ok=True)
-
-        # JSON for programmatic use
-        hil_json = output_path / "hil_samples.json"
-        with open(hil_json, "w") as f:
-            json.dump(selected, f, indent=2, default=str)
-
-        # CSV for spreadsheet
-        hil_csv = output_path / "hil_evaluation_sheet.csv"
-        with open(hil_csv, "w", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow([
-                "HIL_ID", "Scene", "Question_Type",
-                "Model_Output_Preview",
-                "GT_Value", "GT_Field", "GT_Action",
-                "Auto_MoRAL_Score", "Auto_GSA", "Auto_RSQ",
-                "Human_Spatial_Accuracy_1to5",
-                "Human_Reasoning_Quality_1to5",
-                "Human_Action_Correctness_1to5",
-                "Human_Sensor_Grounding_1to5",
-                "Human_Physical_Plausibility_1to5",
-                "Human_Novel_Observations_1to5",
-                "Novel_Object_Not_In_GT_YesNo",
-                "Novel_Object_Description",
-                "Human_Notes",
-            ])
-            for s in selected:
-                scores = s.get("scores", {})
-                writer.writerow([
-                    s.get("hil_id", ""),
-                    s.get("scene", ""),
-                    s.get("qtype", ""),
-                    s.get("pred", "")[:200],
-                    s.get("gt_value", ""),
-                    s.get("gt_field", ""),
-                    s.get("gt_action", ""),
-                    scores.get("moral_score", ""),
-                    scores.get("gsa", ""),
-                    scores.get("rsq", ""),
-                    "", "", "", "", "", "",  # Human fills these in
-                    "", "", "",
-                ])
-
-        # Full text sheet for reading
-        hil_txt = output_path / "hil_full_evaluation.txt"
-        with open(hil_txt, "w") as f:
-            f.write("=" * 80 + "\n")
-            f.write("MoRAL Human-in-the-Loop Evaluation Sheet\n")
-            f.write(f"Total samples: {len(selected)}\n")
-            f.write(f"Generated: {time.strftime('%Y-%m-%d %H:%M')}\n")
-            f.write("=" * 80 + "\n\n")
-            f.write("Instructions: For each sample, rate dimensions 1-5.\n")
-            f.write("1=Poor, 2=Below average, 3=Acceptable, 4=Good, 5=Excellent\n")
-            f.write("Mark N/A if dimension doesn't apply.\n\n")
-
-            for s in selected:
-                scores = s.get("scores", {})
-                f.write("─" * 80 + "\n")
-                f.write(f"ID: {s.get('hil_id')}  |  Scene: {s.get('scene')}  |  "
-                        f"Type: {s.get('qtype')}\n")
-                f.write(f"Auto MoRAL-Score: {scores.get('moral_score', '?')}/100  |  "
-                        f"GSA: {scores.get('gsa', 'N/A')}  |  RSQ: {scores.get('rsq', '?')}\n")
-                f.write("─" * 80 + "\n\n")
-
-                f.write("GROUND TRUTH:\n")
-                if s.get("gt_value") is not None:
-                    f.write(f"  Value: {s['gt_value']} ({s.get('gt_field', '?')})\n")
-                if s.get("gt_action"):
-                    f.write(f"  Action: {s['gt_action']}\n")
-                if s.get("gt_ttc") is not None:
-                    f.write(f"  TTC: {s['gt_ttc']}s\n")
-                f.write("\n")
-
-                f.write("MODEL OUTPUT:\n")
-                f.write(f"  {s.get('pred', '(no output)')}\n\n")
-
-                f.write("RATE (1-5 or N/A):\n")
-                f.write("  [ ] Spatial Accuracy:      ___\n")
-                f.write("  [ ] Reasoning Quality:     ___\n")
-                f.write("  [ ] Action Correctness:    ___\n")
-                f.write("  [ ] Sensor Grounding:      ___\n")
-                f.write("  [ ] Physical Plausibility: ___\n")
-                f.write("  [ ] Novel Observations:    ___\n\n")
-                f.write("  Novel object NOT in GT?  [ ] Yes  [ ] No\n")
-                f.write("  If yes, describe: ________________________________\n\n")
-                f.write("  Notes: ____________________________________________\n\n\n")
-
-        print(f"  HIL exports:")
-        print(f"    JSON:  {hil_json}")
-        print(f"    CSV:   {hil_csv} (open in Google Sheets/Excel)")
-        print(f"    TXT:   {hil_txt} (printable evaluation sheet)")
-
-    return selected
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# MAIN
-# ═══════════════════════════════════════════════════════════════════════════════
-
-def parse_args():
-    parser = argparse.ArgumentParser(
-        description="MoRAL-Score: Compute multi-dimensional VLM reasoning metric",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-    )
-    parser.add_argument("--results_dir", nargs="+", default=None)
-    parser.add_argument("--results_file", default=None)
-    parser.add_argument("--detections_dir", default=None,
-                        help="Dir with detections.json per scene (for NOV scoring)")
-    parser.add_argument("--output_dir", default="saves/moral_score_results")
-
-    parser.add_argument("--hil", action="store_true", help="Generate HIL samples")
-    parser.add_argument("--hil_per_qtype", type=int, default=2,
-                        help="Samples per question type for HIL")
-
-    parser.add_argument("--compare", action="store_true",
-                        help="Generate comparison table")
-    parser.add_argument("--max_samples", type=int, default=None)
-
-    return parser.parse_args()
-
-
-def find_files(args) -> list:
-    files = []
-    if args.results_file:
-        files.append(Path(args.results_file))
-    if args.results_dir:
-        for d in args.results_dir:
-            p = Path(d)
-            if p.is_dir():
-                files.extend(sorted(p.glob("results_*.jsonl")))
-            elif p.is_file():
-                files.append(p)
-    return files
-
-
-def load_detections(det_dir: str, scene: str) -> list:
-    """Load GT detections for a scene if available."""
-    if not det_dir:
-        return []
-    det_path = Path(det_dir) / scene / "detections.json"
-    if det_path.exists():
-        with open(det_path) as f:
-            return json.load(f)
-    return []
-
-
-def process_file(filepath: Path, args) -> tuple:
-    """Process a single results JSONL and compute MoRAL-Scores."""
-    run_id = filepath.stem
-    if run_id.startswith("results_"):
-        run_id = run_id[len("results_"):]
-
-    print(f"\n{'═' * 60}")
-    print(f"  MoRAL-Score: {run_id}")
-    print(f"{'═' * 60}")
-
-    samples = []
-    with open(filepath) as f:
+def load_jsonl(path: Path) -> list[dict]:
+    records = []
+    with open(path) as f:
         for line in f:
             line = line.strip()
             if line:
                 try:
-                    samples.append(json.loads(line))
+                    records.append(json.loads(line))
                 except json.JSONDecodeError:
                     continue
-
-    if args.max_samples:
-        samples = samples[:args.max_samples]
-
-    print(f"  Loaded {len(samples)} samples")
-
-    scored = []
-    for sample in samples:
-        gt_dets = load_detections(args.detections_dir, sample.get("scene", ""))
-        scores = compute_moral_score(sample, gt_detections=gt_dets)
-        sample["scores"] = scores
-        scored.append(sample)
-
-    summary = aggregate_moral_scores(scored)
-    summary["run_id"] = run_id
-    summary["source_file"] = str(filepath)
-
-    # Save
-    out_dir = Path(args.output_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
-
-    out_jsonl = out_dir / f"scored_{run_id}.jsonl"
-    with open(out_jsonl, "w") as f:
-        for s in scored:
-            f.write(json.dumps(s, default=str) + "\n")
-
-    out_summary = out_dir / f"moral_score_summary_{run_id}.json"
-    with open(out_summary, "w") as f:
-        json.dump(summary, f, indent=2, default=str)
-
-    # Print
-    print(f"\n  ── MoRAL-Score Summary: {run_id} ──")
-    for key in ["moral_score", "gsa", "rsq", "act", "nov"]:
-        s = summary.get(key, {})
-        if isinstance(s, dict) and s.get("mean") is not None:
-            print(f"    {key.upper():<14} {s['mean']:>5.1f}/100  "
-                  f"(min={s['min']:.0f}, max={s['max']:.0f}, n={s['n']})")
-
-    print(f"\n    By question type:")
-    for qtype, qs in sorted(summary.get("by_qtype", {}).items()):
-        ms = qs.get("moral_score_mean", "?")
-        gsa = qs.get("gsa_mean", "—")
-        rsq = qs.get("rsq_mean", "—")
-        print(f"      {qtype:<18} MoRAL={ms:>5}  GSA={gsa!s:>5}  RSQ={rsq!s:>5}  n={qs['n']}")
-
-    nd = summary.get("novel_detections", {})
-    if nd.get("total_novel", 0) > 0:
-        print(f"\n    🔍 Novel detections (not in GT): {nd['total_novel']}")
-        print(f"       Classes: {', '.join(nd.get('unique_classes', []))}")
-        for ex in nd.get("examples", [])[:5]:
-            print(f"       • {ex.get('class')} at {ex.get('distance_m')}m "
-                  f"[{ex.get('scene')}] — \"{ex.get('text_span', '')[:60]}\"")
-
-    print(f"\n  Saved: {out_jsonl}")
-    print(f"  Saved: {out_summary}")
-
-    return run_id, summary, scored
+    return records
 
 
-def generate_comparison(all_summaries: dict, output_dir: Path):
-    """Generate markdown comparison table."""
-    lines = []
-    lines.append("# MoRAL-Score Comparison Table\n")
-    lines.append(f"Generated: {time.strftime('%Y-%m-%d %H:%M')}\n")
+def run_all(filter_exp: str = None, verbose: bool = False) -> dict:
+    """Score all discovered experiments. Returns {exp_key: score_dict}."""
+    experiments = discover_all_experiments()
+    if not experiments:
+        print(f"[WARN] No result files found. Check paths:\n  {ZS_DIR}\n  {FT_DIR}")
+        return {}
 
-    runs = sorted(all_summaries.keys())
+    results = {}
+    for meta in experiments:
+        exp_key = f"{meta['eval_type']}__{meta['model_size']}__{meta.get('train_cond','ZS')}__{meta['modality']}__{meta['eval_cond']}"
+        if filter_exp and filter_exp not in exp_key:
+            continue
 
-    # Main table
-    header = "| Metric | " + " | ".join(r[:30] for r in runs) + " |"
-    sep = "|--------|" + "|".join(["-------"] * len(runs)) + "|"
-    lines.append(header)
-    lines.append(sep)
+        print(f"  Scoring: {meta['path'].name} ...", end="", flush=True)
+        records = load_jsonl(meta["path"])
+        scores  = score_experiment(records, modality=meta.get("modality", ""), verbose=verbose)
+        scores.update(meta)
+        scores["exp_key"] = exp_key
+        results[exp_key]  = scores
 
-    for metric in ["moral_score", "gsa", "rsq", "act", "sen", "nov"]:
-        row = f"| **{metric.upper()}** |"
-        for run in runs:
-            s = all_summaries[run].get(metric, {})
-            if isinstance(s, dict) and s.get("mean") is not None:
-                row += f" {s['mean']:.1f} |"
-            else:
-                row += " — |"
-        lines.append(row)
+        sva_str = f"{scores['sva']*100:.1f}%" if scores["sva"] is not None else "N/A"
+        asa_str = f"{scores['asa']*100:.1f}%" if scores["asa"] is not None else "N/A"
+        print(f" SVA={sva_str}  ASA={asa_str}  n={scores['n_samples']}")
 
-    # Per-qtype
-    all_qtypes = set()
-    for s in all_summaries.values():
-        all_qtypes.update(s.get("by_qtype", {}).keys())
+    return results
 
-    lines.append("\n### Per Question Type — MoRAL-Score\n")
-    header2 = "| QType | " + " | ".join(r[:30] for r in runs) + " |"
-    lines.append(header2)
-    lines.append(sep)
-    for qtype in sorted(all_qtypes):
-        row = f"| {qtype} |"
-        for run in runs:
-            qt = all_summaries[run].get("by_qtype", {}).get(qtype, {})
-            ms = qt.get("moral_score_mean")
-            if ms is not None:
-                row += f" {ms:.1f} |"
-            else:
-                row += " — |"
-        lines.append(row)
 
-    table_path = output_dir / "moral_score_comparison.md"
-    with open(table_path, "w") as f:
-        f.write("\n".join(lines))
-    print(f"\n  📊 Comparison table: {table_path}")
+# ═══════════════════════════════════════════════════════════════════════════════
+# SGC — Sensor Grounding Consistency
+# ═══════════════════════════════════════════════════════════════════════════════
 
+def compute_sgc(results: dict) -> dict:
+    """
+    SGC(model, sensor) = (SVA_with_sensor - SVA_without_sensor) / SVA_without_sensor
+    Computes for each model group across modality pairs.
+    """
+    sgc = {}
+
+    # Group results by (eval_type, model_size, train_cond, eval_cond)
+    groups = defaultdict(dict)
+    for key, r in results.items():
+        group = (r["eval_type"], r["model_size"], r.get("train_cond"), r.get("eval_cond"))
+        modality = r.get("modality")
+        if modality and r.get("sva") is not None:
+            groups[group][modality] = r["sva"]
+
+    # Compute SGC for radar contribution: clean_radar vs clean_lidar
+    for group, mods in groups.items():
+        if "clean_radar" in mods and "clean_lidar" in mods:
+            baseline = mods["clean_lidar"]
+            sensor_val = mods["clean_radar"]
+            if baseline > 0:
+                sgc[group] = {"radar_sgc": round((sensor_val - baseline) / baseline, 4),
+                               "radar_sva": sensor_val,
+                               "lidar_sva": baseline}
+
+        if "img" in mods and "cam_only" in mods:
+            baseline = mods["cam_only"]
+            if baseline > 0:
+                sgc.setdefault(group, {})["bev_sgc"] = round(
+                    (mods["img"] - baseline) / baseline, 4)
+
+    return sgc
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Table generation
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def pct(v, flag=""):
+    if v is None:
+        return "—"
+    return f"{v*100:.1f}%{flag}"
+
+def fmt(v):
+    if v is None:
+        return "—"
+    return f"{v:.4f}"
+
+
+def build_table1(results: dict) -> str:
+    """Table 1 — Main Results: Model × Condition × Modality → metrics."""
+    rows = []
+    rows.append("## Table 1 — Main Results\n")
+    rows.append("| Model | Train | Modality | Eval Cond | N | SVA | ASA | BLEU | Tags% | MoRAL-Score | Unique% |")
+    rows.append("|-------|-------|----------|-----------|---|-----|-----|------|-------|-------------|---------|")
+
+    # Sort: zeroshot first, then finetuned; by model size, condition, modality
+    def sort_key(item):
+        r = item[1]
+        return (r["eval_type"], r["model_size"], r.get("train_cond") or "ZS",
+                r.get("eval_cond") or "", r.get("modality") or "")
+
+    for _, r in sorted(results.items(), key=sort_key):
+        model_label = f"Cosmos-{r['model_size']}"
+        train_label = r.get("train_cond") or ("ZS" if r["eval_type"] == "zeroshot" else "?")
+        ev_type     = "ZS" if r["eval_type"] == "zeroshot" else f"FT-{train_label}"
+        rows.append(
+            f"| {model_label} | {ev_type} | {r.get('modality','?')} | {r.get('eval_cond','?')} "
+            f"| {r['n_samples']} "
+            f"| {pct(r['sva'])} | {pct(r['asa'])} | {fmt(r['bleu'])} "
+            f"| {pct(r['tag_pct'])} | {fmt(r['moral_score'])} | {pct(r['unique_pct'])} |"
+        )
+    return "\n".join(rows)
+
+
+def build_table2(results: dict, sgc: dict) -> str:
+    """Table 2 — Sensor Ablation: cam_only vs BEV-only vs BEV+radar."""
+    rows = []
+    rows.append("\n## Table 2 — Sensor Ablation\n")
+    rows.append("| Model | Train | Eval Cond | cam_only SVA | lidar_only SVA | clean_lidar SVA | clean_radar SVA | SGC(radar) | SER_degraded |")
+    rows.append("|-------|-------|-----------|-------------|----------------|-----------------|-----------------|------------|--------------|")
+
+    # Group by (eval_type, model_size, train_cond, eval_cond)
+    groups = defaultdict(dict)
+    for _, r in results.items():
+        group = (r["eval_type"], r["model_size"], r.get("train_cond"), r.get("eval_cond"))
+        mod = r.get("modality")
+        if mod:
+            groups[group][mod] = r
+
+    for group, mods in sorted(groups.items()):
+        eval_type, model_size, train_cond, eval_cond = group
+        ev_label = "ZS" if eval_type == "zeroshot" else f"FT-{train_cond or '?'}"
+        model_label = f"Cosmos-{model_size}"
+
+        def sva_for(m):
+            return pct(mods[m]["sva"]) if m in mods else "—"
+        def ser_deg(m):
+            if m not in mods:
+                return "—"
+            v = mods[m].get("ser_degraded")
+            flag = mods[m].get("ser_full_flag", "")
+            return pct(v, flag)
+
+        sgc_val = sgc.get(group, {}).get("radar_sgc")
+        sgc_str = f"{sgc_val*100:+.1f}%" if sgc_val is not None else "—"
+
+        rows.append(
+            f"| {model_label} | {ev_label} | {eval_cond or '?'} "
+            f"| {sva_for('cam_only')} | {sva_for('clean_lidar_only')} "
+            f"| {sva_for('clean_lidar')} | {sva_for('clean_radar')} "
+            f"| {sgc_str} | {ser_deg('clean_lidar_only')} |"
+        )
+    return "\n".join(rows)
+
+
+def build_table3(results: dict) -> str:
+    """Table 3 — Mode Collapse & Unique Prediction audit (proxy for NOV score until novel_detection_probe.py runs)."""
+    rows = []
+    rows.append("\n## Table 3 — Mode Collapse & Prediction Diversity\n")
+    rows.append("*Note: Full NOV score requires novel_detection_probe.py. This table reports unique pred_action % as a mode-collapse proxy.*\n")
+    rows.append("| Model | Train | Modality | Eval Cond | N | Unique% | Collapse? |")
+    rows.append("|-------|-------|----------|-----------|---|---------|-----------|")
+
+    for _, r in sorted(results.items(), key=lambda x: x[1].get("unique_pct", 1.0)):
+        model_label = f"Cosmos-{r['model_size']}"
+        train_label = r.get("train_cond") or ("ZS" if r["eval_type"] == "zeroshot" else "?")
+        ev_type = "ZS" if r["eval_type"] == "zeroshot" else f"FT-{train_label}"
+        upct = r.get("unique_pct")
+        collapse = "⚠️ YES" if (upct is not None and upct < 0.65) else "no"
+        rows.append(
+            f"| {model_label} | {ev_type} | {r.get('modality','?')} | {r.get('eval_cond','?')} "
+            f"| {r['n_samples']} | {pct(upct)} | {collapse} |"
+        )
+    return "\n".join(rows)
+
+
+def build_summary_stats(results: dict, sgc: dict) -> str:
+    """Print key findings summary for quick human review."""
+    lines = ["\n## Key Findings Summary\n"]
+
+    # Best MoRAL-Score
+    scored = [(k, r) for k, r in results.items() if r.get("moral_score") is not None]
+    if scored:
+        best_k, best_r = max(scored, key=lambda x: x[1]["moral_score"])
+        lines.append(f"**Best MoRAL-Score**: {best_r['moral_score']:.4f} "
+                     f"({best_r['eval_type']} {best_r['model_size']} | "
+                     f"{best_r.get('modality')} | cond{best_r.get('eval_cond')})")
+
+    # Radar SGC
+    for group, vals in sgc.items():
+        if "radar_sgc" in vals:
+            ev, sz, tc, ec = group
+            lines.append(f"**Radar SGC** ({sz} {ev} cond{ec}): "
+                         f"{vals['radar_sgc']*100:+.1f}% spatial gain "
+                         f"(lidar={vals['lidar_sva']*100:.1f}% → radar={vals['radar_sva']*100:.1f}%)")
+
+    # Mode collapse warnings
+    collapses = [(r.get("modality"), r.get("eval_cond"), r.get("unique_pct"))
+                 for r in results.values()
+                 if r.get("unique_pct") is not None and r["unique_pct"] < 0.65]
+    if collapses:
+        lines.append(f"\n**⚠️ Mode collapse detected** ({len(collapses)} experiments, unique% < 65%):")
+        for mod, cond, upct in sorted(collapses, key=lambda x: x[2]):
+            lines.append(f"  - {mod} / {cond}: {upct*100:.1f}%")
+
+    return "\n".join(lines)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Save outputs
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def save_outputs(results: dict, sgc: dict):
+    # Full JSON results
+    out_json = OUT_DIR / "moral_scores_all.json"
+    serialisable = {k: {kk: (str(vv) if isinstance(vv, Path) else vv)
+                         for kk, vv in v.items()}
+                    for k, v in results.items()}
+    out_json.write_text(json.dumps(serialisable, indent=2))
+    print(f"\n[✓] Scores written → {out_json}")
+
+    # SGC
+    sgc_json = OUT_DIR / "sgc_heatmap.json"
+    sgc_serial = {str(k): v for k, v in sgc.items()}
+    sgc_json.write_text(json.dumps(sgc_serial, indent=2))
+    print(f"[✓] SGC heatmap  → {sgc_json}")
+
+    # Tables markdown
+    tables_md = OUT_DIR / "all_tables.md"
+    content = "# MoRAL Evaluation Tables\n"
+    content += f"*Generated from {len(results)} experiments*\n\n"
+    content += build_table1(results) + "\n"
+    content += build_table2(results, sgc) + "\n"
+    content += build_table3(results) + "\n"
+    content += build_summary_stats(results, sgc) + "\n"
+    tables_md.write_text(content)
+    print(f"[✓] Tables       → {tables_md}")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# RQS merge (for when llm_judge.py has run)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def merge_rqs(results: dict, judge_dir: Path) -> dict:
+    """
+    Merge RQS scores from llm_judge output files into results dict.
+    Judge files expected: saves/judge_results/rqs_{exp_key}.json
+    Each file: {"rqs_mean": 0.72, "per_sample": [...]}
+    """
+    if not judge_dir.exists():
+        print(f"[INFO] No judge_results dir found at {judge_dir} — skipping RQS merge")
+        return results
+
+    merged = 0
+    for key in list(results.keys()):
+        judge_file = judge_dir / f"rqs_{key}.json"
+        if judge_file.exists():
+            jdata = json.loads(judge_file.read_text())
+            rqs_val = jdata.get("rqs_mean")
+            results[key]["rqs"] = rqs_val
+            # Recompute MoRAL-Score with RQS
+            r = results[key]
+            if (not r["is_degraded"] and r.get("sva") and r.get("asa")
+                    and r.get("ser_inv_full") and rqs_val is not None):
+                results[key]["moral_score"] = round(
+                    W_SVA * r["sva"] + W_ASA * r["asa"]
+                    + W_RQS * rqs_val + W_SER * r["ser_inv_full"], 4)
+            merged += 1
+
+    print(f"[✓] Merged RQS for {merged} experiments")
+    return results
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CLI
+# ═══════════════════════════════════════════════════════════════════════════════
 
 def main():
-    args = parse_args()
+    parser = argparse.ArgumentParser(description="MoRAL-Score evaluation pipeline")
+    parser.add_argument("--experiment",   help="Filter to single experiment key substring")
+    parser.add_argument("--tables-only",  action="store_true",
+                        help="Load existing moral_scores_all.json and regenerate tables only")
+    parser.add_argument("--merge-rqs",    action="store_true",
+                        help="Merge llm_judge RQS scores before computing composite")
+    parser.add_argument("--verbose",      action="store_true")
+    args = parser.parse_args()
 
-    print("\n" + "=" * 60)
-    print(" MoRAL-Score Evaluator")
-    print("=" * 60)
+    if args.tables_only:
+        existing = OUT_DIR / "moral_scores_all.json"
+        if not existing.exists():
+            print(f"[ERROR] No existing scores at {existing}. Run without --tables-only first.")
+            return
+        results = json.loads(existing.read_text())
+        # Re-parse Path fields
+        sgc = compute_sgc(results)
+        save_outputs(results, sgc)
+        return
 
-    files = find_files(args)
-    if not files:
-        print("❌ No results files found")
-        sys.exit(1)
+    print(f"\n{'='*60}")
+    print("MoRAL-Score Evaluation Pipeline")
+    print(f"Pipeline root: {PIPELINE_ROOT}")
+    print(f"{'='*60}\n")
 
-    print(f"  Found {len(files)} results file(s)")
+    results = run_all(filter_exp=args.experiment, verbose=args.verbose)
 
-    all_summaries = {}
-    all_scored = []
+    if not results:
+        print("[WARN] No experiments scored.")
+        return
 
-    for filepath in files:
-        run_id, summary, scored = process_file(filepath, args)
-        all_summaries[run_id] = summary
-        all_scored.extend(scored)
+    if args.merge_rqs:
+        results = merge_rqs(results, PIPELINE_ROOT / "saves/judge_results")
 
-    out_dir = Path(args.output_dir)
+    sgc = compute_sgc(results)
+    save_outputs(results, sgc)
 
-    if args.compare and len(all_summaries) > 1:
-        generate_comparison(all_summaries, out_dir)
-
-    if args.hil:
-        print(f"\n{'═' * 60}")
-        print(f"  Generating HIL evaluation samples")
-        print(f"{'═' * 60}")
-        generate_hil_samples(all_scored, n_per_qtype=args.hil_per_qtype,
-                             output_path=out_dir / "hil")
-
-    print(f"\n{'═' * 60}")
-    print(f" ✅ Done — {len(all_summaries)} run(s) scored")
-    print(f"{'═' * 60}\n")
+    print(f"\n[✓] Done. {len(results)} experiments scored.")
+    print(f"    Tables → {OUT_DIR}/all_tables.md")
 
 
 if __name__ == "__main__":
